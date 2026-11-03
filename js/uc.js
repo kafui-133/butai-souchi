@@ -137,7 +137,7 @@
 
   // 世界の切り替えタブ
   const tabs = $("#worldTabs");
-  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説" };
+  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説", sw: "スター・ウォーズ" };
   for (const [sid, sname] of Object.entries(SERIES)) {
     const grp = document.createElement("div");
     grp.className = "tab-group";
@@ -161,29 +161,99 @@
     tabs.querySelectorAll(".world-tab").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === world.id)));
     $("#worldTitle").textContent = world.era;
     $("#worldIntro").textContent = world.intro;
-    list.innerHTML = "";
-    let lastWork = null;
-    EVENTS.forEach((e, i) => {
-      if (e.work !== lastWork) {
-        const h = document.createElement("li");
-        h.className = "work-h";
-        h.innerHTML = `<span class="dot" style="background:${WORKS[e.work].color}"></span>${WORKS[e.work].name}`;
-        list.appendChild(h);
-        lastWork = e.work;
-      }
-      const li = document.createElement("li");
-      const b = document.createElement("button");
-      b.type = "button"; b.className = "ev"; b.dataset.i = i;
-      b.innerHTML = `<span class="ev-date">${e.date}</span><span class="ev-title">${e.title}</span>`;
-      b.addEventListener("click", () => go(i, true));
-      li.appendChild(b); list.appendChild(li);
-    });
+    buildList();
     scrub.max = EVENTS.length - 1;
     zoom = 0; gcx = 0; gcy = 0; gscale = 1;
     if (user && location.hash !== "#" + world.id) history.replaceState(null, "", "#" + world.id);
-    list.parentElement.scrollTop = 0;
+    if (!evQuery) list.parentElement.scrollTop = 0;
     go(0);
   }
+
+  /* ---------- 一覧と検索 ---------- */
+  const norm = (s) => String(s || "").normalize("NFKC").toLowerCase();
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const searchBox = $("#evSearch");
+  let evQuery = "";
+  function evHay(w, e) {
+    const places = Object.assign({}, w.map === "earthmoon" ? BASE_PLACES : {}, w.places);
+    return [e.title, e.text, e.date, e.placeName, (places[e.place] || {}).name, (w.works[e.work] || {}).name, w.era, w.short];
+  }
+  function snippet(texts, term) {
+    for (const t of texts) {
+      const n = norm(t), i = n.indexOf(term);
+      if (i < 0) continue;
+      const plain = String(t).normalize("NFKC"), a = Math.max(0, i - 14), b = Math.min(plain.length, i + term.length + 24);
+      return (a > 0 ? "…" : "") + esc(plain.slice(a, i)) + "<mark>" + esc(plain.slice(i, i + term.length)) + "</mark>" + esc(plain.slice(i + term.length, b)) + (b < plain.length ? "…" : "");
+    }
+    return "";
+  }
+  function evButton(w, e, i, extra) {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "ev"; b.dataset.i = i; b.dataset.w = w.id;
+    b.innerHTML = `<span class="ev-date">${esc(e.date)}</span><span class="ev-title">${esc(e.title)}</span>${extra || ""}`;
+    b.addEventListener("click", () => { if (world.id !== w.id) setWorld(w.id, true); go(i, true); });
+    li.appendChild(b);
+    return li;
+  }
+  function buildList() {
+    list.innerHTML = "";
+    const cnt = $("#evCount");
+    if (!evQuery) {
+      let lastWork = null;
+      EVENTS.forEach((e, i) => {
+        if (e.work !== lastWork) {
+          const h = document.createElement("li");
+          h.className = "work-h";
+          h.innerHTML = `<span class="dot" style="background:${WORKS[e.work].color}"></span>${esc(WORKS[e.work].name)}`;
+          list.appendChild(h);
+          lastWork = e.work;
+        }
+        list.appendChild(evButton(world, e, i));
+      });
+      cnt.textContent = `${world.short}：${EVENTS.length} 件`;
+    } else {
+      const terms = evQuery.split(/\s+/).filter(Boolean);
+      let total = 0;
+      // 表示中の作品を先頭に、その後に他の作品
+      const order = [world, ...WORLDS.filter((w) => w !== world)];
+      for (const w of order) {
+        const hits = [];
+        w.events.forEach((e, i) => {
+          const hay = evHay(w, e);
+          if (terms.every((tm) => hay.some((h) => norm(h).includes(tm)))) hits.push([e, i]);
+        });
+        if (!hits.length) continue;
+        const h = document.createElement("li");
+        h.className = "world-h";
+        h.textContent = `${w.era}（${hits.length}件）`;
+        list.appendChild(h);
+        for (const [e, i] of hits) {
+          const sn = snippet([e.text, e.placeName, (w.works[e.work] || {}).name], terms[0]);
+          list.appendChild(evButton(w, e, i, `<span class="ev-world">${esc((w.works[e.work] || {}).name || "")}</span>${sn ? `<span class="ev-snip">${sn}</span>` : ""}`));
+        }
+        total += hits.length;
+      }
+      if (!total) {
+        const li = document.createElement("li");
+        li.className = "work-h";
+        li.textContent = "該当する出来事は見つかりませんでした。";
+        list.appendChild(li);
+      }
+      cnt.textContent = `「${searchBox.value.trim()}」：${total} 件`;
+    }
+    markActive(false);
+  }
+  function markActive(user) {
+    list.querySelectorAll(".ev").forEach((b) => b.classList.toggle("on", b.dataset.w === world.id && +b.dataset.i === cur));
+    const btn = list.querySelector(`.ev.on`);
+    const col = list.parentElement;
+    if (btn && col.scrollHeight > col.clientHeight) {
+      const top = btn.offsetTop - col.clientHeight / 2 + btn.offsetHeight / 2;
+      col.scrollTo({ top, behavior: user ? "smooth" : "auto" });
+    }
+  }
+  searchBox.addEventListener("input", () => { evQuery = norm(searchBox.value.trim()); buildList(); list.parentElement.scrollTop = 0; });
 
   /* ---------- 状態 ---------- */
   let cur = 0, te = 0, playing = !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -196,13 +266,7 @@
     cur = clamp(i, 0, EVENTS.length - 1); te = 0;
     const e = EVENTS[cur];
     scrub.value = cur;
-    list.querySelectorAll(".ev").forEach((b) => b.classList.toggle("on", +b.dataset.i === cur));
-    const btn = list.querySelector(`.ev[data-i="${cur}"]`);
-    const col = list.parentElement;
-    if (btn && col.scrollHeight > col.clientHeight) {
-      const top = btn.offsetTop - col.clientHeight / 2 + btn.offsetHeight / 2;
-      col.scrollTo({ top, behavior: user ? "smooth" : "auto" });
-    }
+    if (!evQuery || user !== "search") markActive(user && !evQuery);
     const w = WORKS[e.work];
     const placeName = e.placeName || (PLACES[e.place] || {}).name || "";
     $("#card").innerHTML = `
@@ -369,37 +433,40 @@
     // カメラ
     let tcx = 0, tcy = 0, ts = 1;
     const routeOn = e.route && te < 4.5;
-    if (!routeOn && pl && e.fx) { tcx = pl.p[0]; tcy = pl.p[1]; ts = 2.6; }
+    if (!routeOn && pl && e.fx === "planetkill" && e.from) {
+      const fp = PLACES[e.from].p, d = Math.hypot(pl.p[0] - fp[0], pl.p[1] - fp[1]);
+      tcx = (pl.p[0] + fp[0]) / 2; tcy = (pl.p[1] + fp[1]) / 2; ts = clamp(0.9 / Math.max(d, 0.05), 1, 2.6);
+    } else if (!routeOn && pl && e.fx) { tcx = pl.p[0]; tcy = pl.p[1]; ts = 2.6; }
     else if (!routeOn && pl) { tcx = pl.p[0] * 0.5; tcy = pl.p[1] * 0.5; ts = 1.5; }
     const kk = Math.min(1, dt * 2);
     gcx += (tcx - gcx) * kk; gcy += (tcy - gcy) * kk; gscale += (ts - gscale) * kk;
     const S = Math.min(W / 2.3, H / 1.55) * gscale;
     const X = (x) => W / 2 + (x - gcx) * S, Y = (y) => H / 2 + (y - gcy) * S;
 
-    ctx.fillStyle = "#04030a"; ctx.fillRect(0, 0, W, H);
-    // 勢力の色
-    const tint = (x, y, col) => { const g = ctx.createRadialGradient(X(x), Y(y), 0, X(x), Y(y), S * 0.9); g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
-    tint(-0.6, 0, "rgba(255,190,80,0.16)");
-    tint(0.6, 0, "rgba(80,150,255,0.16)");
-    // 星
-    for (const p of GAL.pts) { ctx.globalAlpha = p.b; ctx.fillStyle = p.x < -0.1 ? "#ffe8c0" : p.x > 0.1 ? "#cfe0ff" : "#fff"; ctx.fillRect(X(p.x), Y(p.y), p.s, p.s); }
-    ctx.globalAlpha = 1;
-    // 航行不能宙域
-    for (const n of GAL.neb) glow(X(n.x), Y(n.y), n.r * S, `hsla(${330 + n.h * 40},70%,45%,0.5)`, 0.5);
-    // 回廊
-    ctx.setLineDash([4, 5]); ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
-    for (const [y0, y1] of [[-0.4, -0.2], [0.33, 0.51]]) { ctx.beginPath(); ctx.moveTo(X(-0.1), Y(y0)); ctx.lineTo(X(0.1), Y(y0)); ctx.moveTo(X(-0.1), Y(y1)); ctx.lineTo(X(0.1), Y(y1)); ctx.stroke(); }
-    ctx.setLineDash([]);
-    text("銀河帝国", X(-0.62), Y(-0.6), { s: 15 * Math.min(1.4, gscale), w: 800, a: "center", c: "rgba(255,210,120,0.9)" });
-    text("自由惑星同盟", X(0.62), Y(-0.6), { s: 15 * Math.min(1.4, gscale), w: 800, a: "center", c: "rgba(140,190,255,0.9)" });
-    text("航行不能宙域", X(0), Y(0.08), { s: 10, a: "center", c: "rgba(255,150,190,0.7)" });
-    text("イゼルローン回廊", X(0), Y(-0.43), { s: 10, a: "center", c: "rgba(255,255,255,0.6)" });
-    text("フェザーン回廊", X(0), Y(0.56), { s: 10, a: "center", c: "rgba(255,255,255,0.6)" });
+    if (world.galaxy === "sw") drawSwBg(X, Y, S); else drawLoghBg(X, Y, S);
 
     // 場所
     for (const [key, p] of Object.entries(PLACES)) {
       if (p.type === "point") continue;
       const x = X(p.p[0]), y = Y(p.p[1]), active = e.place === key;
+      if (e.fx === "planetkill" && key === e.place && te > 2.2) { text(p.name, x, y + 16 * Math.sqrt(gscale), { s: 13, a: "center", w: 800, c: "#ff9a8a" }); continue; }
+      if (p.type === "planet") {
+        const r = 3 * Math.sqrt(gscale);
+        ctx.fillStyle = p.color || "#9fc0ff"; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+        if (active) glow(x, y, r * 4, "rgba(255,233,168,0.5)");
+        text(p.name, x, y + 16 * Math.sqrt(gscale), { s: active ? 13 : 10, a: "center", w: active ? 800 : 500, c: active ? "#ffe9a8" : "rgba(220,225,245,0.75)" });
+        continue;
+      }
+      if (p.type === "station") {
+        const r = 5 * Math.sqrt(gscale);
+        const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r);
+        g.addColorStop(0, "#d8dde6"); g.addColorStop(1, "#4a5060");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+        ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x + r * 0.35, y - r * 0.35, r * 0.25, 0, TAU); ctx.stroke();
+        text(p.name, x, y + 16 * Math.sqrt(gscale), { s: active ? 13 : 10, a: "center", w: active ? 800 : 500, c: "rgba(220,225,245,0.75)" });
+        continue;
+      }
       if (p.type === "capital") {
         glow(x, y, 16 * Math.sqrt(gscale), p.side === "empire" ? "rgba(255,210,120,0.9)" : "rgba(140,190,255,0.9)");
         ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, TAU); ctx.fill();
@@ -423,10 +490,11 @@
       const i0 = Math.min(pts.length - 2, Math.floor(f)), u = f - i0;
       const fx = lerp(pts[i0][0], pts[i0 + 1][0], u), fy = lerp(pts[i0][1], pts[i0 + 1][1], u);
       const ang = Math.atan2(pts[i0 + 1][1] - pts[i0][1], pts[i0 + 1][0] - pts[i0][0]);
-      const empire = (PLACES[e.route[0]].p[0] < 0) && e.route[0] !== "altair";
+      const empire = world.galaxy === "sw" ? false : (PLACES[e.route[0]].p[0] < 0) && e.route[0] !== "altair";
+      const routeCol = e.routeColor || (empire ? "#ffd27a" : "#8fc0ff");
       for (let q = 0; q < 7; q++) {
         const ox = -Math.cos(ang) * (q % 4) * 7 - Math.sin(ang) * ((q % 3) - 1) * 7, oy = -Math.sin(ang) * (q % 4) * 7 + Math.cos(ang) * ((q % 3) - 1) * 7;
-        ship(X(fx) + ox, Y(fy) + oy, ang, empire ? "#ffd27a" : "#8fc0ff", 5);
+        ship(X(fx) + ox, Y(fy) + oy, ang, routeCol, 5);
       }
     }
 
@@ -439,9 +507,10 @@
         for (const f of fleets) {
           const sx = f.side ? 1 : -1;
           const x = cx + sx * (50 + f.ox * 90) + Math.sin(t * 0.8 + f.ph) * 4, y = cy + (f.oy - 0.5) * 120;
-          ship(x, y, f.side ? Math.PI : 0, f.side ? "#8fc0ff" : "#ffd27a", 6);
+          const fc = e.fleet || world.fleet || ["#ffd27a", "#8fc0ff"];
+          ship(x, y, f.side ? Math.PI : 0, fc[f.side], 6);
           if (Math.sin(t * 6 + f.ph * 5) > 0.85) {
-            ctx.strokeStyle = f.side ? "rgba(140,200,255,0.9)" : "rgba(255,220,140,0.9)"; ctx.lineWidth = 1.2;
+            ctx.strokeStyle = world.galaxy === "sw" ? (f.side ? "rgba(120,255,140,0.9)" : "rgba(255,90,90,0.9)") : f.side ? "rgba(140,200,255,0.9)" : "rgba(255,220,140,0.9)"; ctx.lineWidth = 1.2;
             ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(cx - sx * 30 + Math.sin(f.ph) * 20, y + Math.cos(t + f.ph) * 30); ctx.stroke();
           }
           if (Math.sin(t * 3 + f.ph * 7) > 0.97) glow(x, y, 14, "rgba(255,200,120,1)");
@@ -452,8 +521,38 @@
         if (te > 1) glow(cx, cy, 14 + f * 60, "rgba(255,255,220,1)", 1 - f);
       } else if (e.fx === "flash") {
         glow(cx, cy, 30 + 6 * Math.sin(t * 4), "rgba(255,230,180,0.9)", 0.6);
+      } else if (e.fx === "duel") {
+        const sw = Math.sin(t * 3.2), L = 46;
+        const cols = e.sabers || ["#4fa8ff", "#ff3b3b"];
+        const s1 = -0.9 + sw * 0.5, s2 = Math.PI + 0.9 - sw * 0.5;
+        for (const [ang, col, ox] of [[s1, cols[0], -14], [s2, cols[1], 14]]) {
+          const x0 = cx + ox, y0 = cy + 22;
+          ctx.lineCap = "round";
+          ctx.strokeStyle = col; ctx.lineWidth = 7; ctx.globalAlpha = a * 0.35;
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + Math.cos(ang) * L, y0 + Math.sin(ang) * L); ctx.stroke();
+          ctx.globalAlpha = a; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + Math.cos(ang) * L, y0 + Math.sin(ang) * L); ctx.stroke();
+        }
+        if (Math.abs(sw) < 0.25) glow(cx, cy - 8, 18, "rgba(255,255,220,1)", a);
       }
       ctx.globalAlpha = 1;
+    }
+    if (pl && e.fx === "planetkill" && e.from) {
+      const fp = PLACES[e.from].p, fx0 = X(fp[0]), fy0 = Y(fp[1]), tx = X(pl.p[0]), ty = Y(pl.p[1]);
+      if (te > 1 && te < 2.4) {
+        const f = clamp((te - 1) / 0.8, 0, 1);
+        ctx.strokeStyle = "rgba(120,255,120,0.9)"; ctx.lineWidth = 5; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(fx0, fy0); ctx.lineTo(lerp(fx0, tx, f), lerp(fy0, ty, f)); ctx.stroke();
+        ctx.strokeStyle = "#eaffea"; ctx.lineWidth = 1.5; ctx.stroke();
+        glow(fx0, fy0, 16, "rgba(140,255,140,0.9)");
+      }
+      if (te > 2.2) {
+        const f = clamp((te - 2.2) / 3, 0, 1);
+        glow(tx, ty, 10 + f * 70, "rgba(255,240,200,1)", 1 - f);
+        ctx.strokeStyle = `rgba(255,170,120,${1 - f})`; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(tx, ty, 6 + f * 60, 2 + f * 14, -0.3, 0, TAU); ctx.stroke();
+        for (let i = 0; i < 18; i++) { const aa = i * 0.35 + 0.2; ctx.fillStyle = `rgba(255,200,150,${1 - f})`; ctx.fillRect(tx + Math.cos(aa) * f * 50 * (0.6 + (i % 3) * 0.2), ty + Math.sin(aa) * f * 50 * (0.6 + (i % 3) * 0.2), 2, 2); }
+      }
     }
     if (pl && !e.route) {
       const pulse = (te * 1.2) % 1;
@@ -461,6 +560,75 @@
       ctx.beginPath(); ctx.arc(X(pl.p[0]), Y(pl.p[1]), 8 + pulse * 26, 0, TAU); ctx.stroke();
     }
     text("位置関係は物語を理解するための模式図です", W - 12, H - 10, { s: 10, a: "right", c: "rgba(200,200,220,0.5)", shadow: false });
+  }
+  function drawLoghBg(X, Y, S) {
+    const W = view.w, H = view.h;
+    ctx.fillStyle = "#04030a"; ctx.fillRect(0, 0, W, H);
+    // 勢力の色
+    const tint = (x, y, col) => { const g = ctx.createRadialGradient(X(x), Y(y), 0, X(x), Y(y), S * 0.9); g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
+    tint(-0.6, 0, "rgba(255,190,80,0.16)");
+    tint(0.6, 0, "rgba(80,150,255,0.16)");
+    // 星
+    for (const p of GAL.pts) { ctx.globalAlpha = p.b; ctx.fillStyle = p.x < -0.1 ? "#ffe8c0" : p.x > 0.1 ? "#cfe0ff" : "#fff"; ctx.fillRect(X(p.x), Y(p.y), p.s, p.s); }
+    ctx.globalAlpha = 1;
+    // 航行不能宙域
+    for (const n of GAL.neb) glow(X(n.x), Y(n.y), n.r * S, `hsla(${330 + n.h * 40},70%,45%,0.5)`, 0.5);
+    // 回廊
+    ctx.setLineDash([4, 5]); ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
+    for (const [y0, y1] of [[-0.4, -0.2], [0.33, 0.51]]) { ctx.beginPath(); ctx.moveTo(X(-0.1), Y(y0)); ctx.lineTo(X(0.1), Y(y0)); ctx.moveTo(X(-0.1), Y(y1)); ctx.lineTo(X(0.1), Y(y1)); ctx.stroke(); }
+    ctx.setLineDash([]);
+    text("銀河帝国", X(-0.62), Y(-0.6), { s: 15 * Math.min(1.4, gscale), w: 800, a: "center", c: "rgba(255,210,120,0.9)" });
+    text("自由惑星同盟", X(0.62), Y(-0.6), { s: 15 * Math.min(1.4, gscale), w: 800, a: "center", c: "rgba(140,190,255,0.9)" });
+    text("航行不能宙域", X(0), Y(0.08), { s: 10, a: "center", c: "rgba(255,150,190,0.7)" });
+    text("イゼルローン回廊", X(0), Y(-0.43), { s: 10, a: "center", c: "rgba(255,255,255,0.6)" });
+    text("フェザーン回廊", X(0), Y(0.56), { s: 10, a: "center", c: "rgba(255,255,255,0.6)" });
+
+  }
+  /* スター・ウォーズの銀河：中心から外側へ地域が広がる */
+  const SWG = (() => {
+    const pts = [];
+    for (let i = 0; i < 3000; i++) {
+      const arm = i % 4, r = Math.pow(Math.random(), 0.55) * 0.95;
+      const a = (arm * Math.PI) / 2 + r * 4.2 + (Math.random() - 0.5) * 0.7;
+      pts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r * 0.78, b: Math.random() * 0.7 + 0.2, s: Math.random() * 1.3 + 0.3 });
+    }
+    return { pts };
+  })();
+  function drawSwBg(X, Y, S) {
+    const W = view.w, H = view.h;
+    ctx.fillStyle = "#03030a"; ctx.fillRect(0, 0, W, H);
+    const core = ctx.createRadialGradient(X(0), Y(0), 0, X(0), Y(0), S * 0.45);
+    core.addColorStop(0, "rgba(255,235,190,0.55)"); core.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = core; ctx.fillRect(0, 0, W, H);
+    for (const p of SWG.pts) { ctx.globalAlpha = p.b; ctx.fillStyle = p.x < -0.55 ? "#8a7fa8" : "#e8ecff"; ctx.fillRect(X(p.x), Y(p.y), p.s, p.s); }
+    ctx.globalAlpha = 1;
+    // 未知領域（西側）
+    const ug = ctx.createLinearGradient(X(-1), 0, X(-0.5), 0);
+    ug.addColorStop(0, "rgba(20,8,30,0.85)"); ug.addColorStop(1, "rgba(20,8,30,0)");
+    ctx.fillStyle = ug; ctx.fillRect(X(-1.1), Y(-0.9), X(-0.5) - X(-1.1), Y(0.9) - Y(-0.9));
+    // 地域の境界
+    const rings = [[0.07, ""], [0.17, "コア・ワールド"], [0.3, "インナー・リム"], [0.5, "ミッド・リム"], [0.88, "アウター・リム"]];
+    ctx.setLineDash([3, 6]); ctx.lineWidth = 1;
+    for (const [r, nm] of rings) {
+      ctx.strokeStyle = "rgba(170,190,255,0.22)";
+      ctx.beginPath(); ctx.ellipse(X(0), Y(0), r * S, r * 0.78 * S, 0, 0, TAU); ctx.stroke();
+      text(nm, X(0), Y(r * 0.78) + 12, { s: 10, a: "center", c: "rgba(170,190,255,0.55)", shadow: false });
+    }
+    ctx.setLineDash([]);
+    // ハイパースペース航路
+    const routes = [
+      ["コレリアン・ラン", [[0, -0.12], [0.25, 0.15], [0.5, 0.38], [0.62, 0.5]]],
+      ["ハイディアン・ウェイ", [[-0.2, -0.68], [-0.1, -0.3], [0.05, 0.1], [0.2, 0.68]]],
+      ["パールミアン交易ルート", [[0, -0.15], [0.25, -0.3], [0.62, -0.5]]],
+      ["リマ交易ルート", [[0, -0.1], [0.02, 0.3], [0.1, 0.72]]],
+    ];
+    for (const [nm, pts] of routes) {
+      ctx.strokeStyle = "rgba(255,200,120,0.25)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)))); ctx.stroke();
+      const [lx, ly] = pts[pts.length - 1];
+      text(nm, X(lx), Y(ly) + 12, { s: 9, a: "center", c: "rgba(255,200,120,0.55)", shadow: false });
+    }
+    text("未知領域", X(-0.82), Y(-0.55), { s: 13, w: 800, a: "center", c: "rgba(190,160,230,0.75)" });
   }
   function ship(x, y, ang, col, s) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(ang);

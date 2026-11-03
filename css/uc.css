@@ -71,3 +71,12 @@
 .world-head h2 { margin: 0 0 4px; font-size: 20px; }
 .world-head p { margin: 0; color: #c9d3ef; font-size: 14px; max-width: 80ch; }
 @media (max-width: 640px) { .tab-group { grid-template-columns: 1fr; gap: 4px; } }
+
+.ev-search { position: sticky; top: 0; z-index: 2; padding: 10px 10px 8px; background: #0a0f22; border-bottom: 1px solid var(--line); }
+.ev-search-l { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .05em; margin-bottom: 5px; }
+.ev-search input { width: 100%; padding: 8px 11px; border-radius: 10px; background: var(--bg2); border: 1px solid var(--line); outline: none; font-size: 13.5px; }
+.ev-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79, 227, 255, 0.15); }
+.ev-count { margin: 5px 0 0; font-size: 11px; color: var(--muted); min-height: 1em; }
+.world-h { font-size: 12px; font-weight: 800; color: var(--accent); padding: 12px 8px 2px; }
+.ev-world { font-size: 10.5px; color: var(--muted); }
+.ev-snip { font-size: 11.5px; color: #b9c4e4; line-height: 1.5; }
