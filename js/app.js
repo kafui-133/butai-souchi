@@ -58,15 +58,7 @@
       li.title = L.desc;
       legend.appendChild(li);
     });
-    $("#search").addEventListener("input", (e) => {
-      const q = e.target.value.trim().toLowerCase();
-      list.querySelectorAll("a").forEach((a) => {
-        const c = CONCEPTS.find((x) => x.id === a.dataset.id);
-        const hay = [c.title, c.en, c.category, c.kind, c.tagline, ...(c.works || []), ...c.origins.map((o) => o.title)].join(" ").toLowerCase();
-        a.parentElement.hidden = q && !hay.includes(q);
-      });
-      if (!location.hash || location.hash === "#") renderHome(q);
-    });
+    $("#search").addEventListener("input", (e) => applySearch(e.target.value, "side"));
     $("#menuBtn").addEventListener("click", () => document.body.classList.toggle("nav-open"));
   }
 
@@ -207,6 +199,57 @@
     current.io.observe(canvasBox);
   }
 
+  /* ---------- 検索 ---------- */
+  const norm = (s) => String(s).normalize("NFKC").toLowerCase().replace(/<[^>]+>/g, "");
+  // 検索対象のフィールド（表示名つき）
+  const FIELDS = (c) => [
+    ["名前", [c.title, c.en]],
+    ["分類", [c.category, c.kind]],
+    ["概要", [c.tagline, ...c.summary]],
+    ["出典・元ネタ", c.origins.map((o) => `${o.year} ${o.title} ${o.note}`)],
+    ["物理と数式", c.physics.map((f) => `${f.heading} ${f.body}`)],
+    ["実現可能性", [c.feasibility.body, ...c.feasibility.items.map((i) => `${i.label} ${LEVELS[i.level].label}`), ...(c.feasibility.milestones || []).map((m) => `${m.year} ${m.text}`)]],
+    ["関連作品", c.works || []],
+  ];
+  function matchConcept(c, q) {
+    if (!q) return { ok: true };
+    const terms = q.split(/\s+/).filter(Boolean);
+    let hit = null;
+    for (const term of terms) {
+      let found = false;
+      for (const [label, texts] of FIELDS(c)) {
+        for (const t of texts) {
+          const n = norm(t), i = n.indexOf(term);
+          if (i >= 0) {
+            found = true;
+            if (!hit && label !== "名前") {
+              const plain = String(t).replace(/<[^>]+>/g, "").normalize("NFKC");
+              const a = Math.max(0, i - 18), b = Math.min(plain.length, i + term.length + 30);
+              hit = { label, before: (a > 0 ? "…" : "") + plain.slice(a, i), word: plain.slice(i, i + term.length), after: plain.slice(i + term.length, b) + (b < plain.length ? "…" : "") };
+            }
+            break;
+          }
+        }
+        if (found) break;
+      }
+      if (!found) return { ok: false };
+    }
+    return { ok: true, hit };
+  }
+  let query = "";
+  function applySearch(raw, from) {
+    query = norm(raw.trim());
+    const side = $("#search"), home = $("#homeSearch");
+    if (from !== "side" && side.value !== raw) side.value = raw;
+    if (home && from !== "home" && home.value !== raw) home.value = raw;
+    $("#navList").querySelectorAll("a").forEach((a) => {
+      const c = CONCEPTS.find((x) => x.id === a.dataset.id);
+      a.parentElement.hidden = !matchConcept(c, query).ok;
+    });
+    if ($("#cardGrid")) renderCards();
+    else if (from === "side" && query && (location.hash && location.hash !== "#")) { /* 詳細ページでは目次だけ絞り込む */ }
+  }
+
   /* ---------- ホーム ---------- */
   function renderHome(filter = "") {
     stopAnim();
@@ -217,12 +260,35 @@
       <h1>SFの<span class="grad">舞台装置</span>を、物理で読み解く。</h1>
       <p class="lead">並行世界、量子もつれ、ウラシマ効果、反物質……。物語を動かす概念やマクガフィンを、<b>動くアニメーション</b>・<b>出典と元ネタ</b>・<b>数式と物理</b>・<b>現時点での実現可能性</b>の4つの視点から解説します。</p>`);
     main.appendChild(hero);
-    const grid = el("div", { class: "card-grid" });
-    const q = filter.toLowerCase();
+    const bar = el("div", { class: "home-search", role: "search" });
+    bar.innerHTML = `
+      <label for="homeSearch" class="hs-label">概念を探す</label>
+      <div class="hs-row">
+        <input type="search" id="homeSearch" placeholder="例：ガンダム、相対性理論、1942、実証済み、レーザー…" autocomplete="off">
+        <button type="button" class="tool-btn" id="homeSearchClear">クリア</button>
+      </div>
+      <p class="hs-count" id="homeSearchCount" aria-live="polite"></p>`;
+    main.appendChild(bar);
+    const input = bar.querySelector("#homeSearch");
+    input.value = filter;
+    input.addEventListener("input", () => applySearch(input.value, "home"));
+    bar.querySelector("#homeSearchClear").addEventListener("click", () => { applySearch("", "button"); input.focus(); });
+    main.appendChild(el("div", { class: "card-grid", id: "cardGrid" }));
+    query = norm(filter.trim());
+    renderCards();
+    main.appendChild(el("p", { class: "footnote" }, "※ 物理量の数値は代表的な文献値・概算です。作品の年は初出（雑誌掲載・放送開始など）を基準としています。"));
+    setActive(null);
+  }
+
+  function renderCards() {
+    const grid = $("#cardGrid");
+    grid.innerHTML = "";
+    let n = 0;
     CONCEPTS.forEach((c, i) => {
-      const hay = [c.title, c.en, c.category, c.kind, c.tagline, ...(c.works || [])].join(" ").toLowerCase();
-      if (q && !hay.includes(q)) return;
-      const card = el("a", { class: "card", href: `#${c.id}`, style: `--i:${i}` });
+      const m = matchConcept(c, query);
+      if (!m.ok) return;
+      n++;
+      const card = el("a", { class: "card", href: `#${c.id}`, style: `--i:${query ? 0 : i}` });
       card.innerHTML = `
         <div class="card-top"><span class="chip">${esc(c.kind)}</span><span class="chip ghost">${esc(c.category)}</span></div>
         <h2>${esc(c.title)}</h2>
@@ -235,13 +301,13 @@
         row.appendChild(el("span", {}, esc(it.label)));
         feas.appendChild(row);
       });
+      if (m.hit) card.appendChild(el("p", { class: "card-hit" }, `<span>${esc(m.hit.label)}</span>${esc(m.hit.before)}<mark>${esc(m.hit.word)}</mark>${esc(m.hit.after)}`));
       card.appendChild(feas);
       grid.appendChild(card);
     });
-    if (!grid.children.length) grid.appendChild(el("p", { class: "empty" }, "該当する概念が見つかりませんでした。"));
-    main.appendChild(grid);
-    main.appendChild(el("p", { class: "footnote" }, "※ 物理量の数値は代表的な文献値・概算です。作品の年は初出（雑誌掲載・放送開始など）を基準としています。"));
-    setActive(null);
+    if (!n) grid.appendChild(el("p", { class: "empty" }, "該当する概念が見つかりませんでした。別のことばで試してみてください。"));
+    const cnt = $("#homeSearchCount");
+    if (cnt) cnt.textContent = query ? `${n} 件の概念が見つかりました（全 ${CONCEPTS.length} 件）` : `全 ${CONCEPTS.length} 件の概念`;
   }
 
   /* ---------- 詳細ページ ---------- */

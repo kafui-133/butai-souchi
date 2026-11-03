@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>作品年表 — 舞台装置</title>
+  <meta name="description" content="ガンダムシリーズ各作品・銀河英雄伝説・スター・ウォーズ・エヴァンゲリオン・マクロスの主な出来事を、地図上でアニメーション再生する年表。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/uc.css">
+  <script defer src="js/uc-data.js"></script>
+  <script defer src="js/worlds.js"></script>
+  <script defer src="js/uc.js"></script>
+</head>
+<body class="uc-page">
+  <header class="topbar">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>
+        <span class="brand-title">舞台装置</span>
+        <span class="brand-sub">BUTAI-SOUCHI ／ SF概念図鑑</span>
+      </span>
+    </a>
+    <nav class="top-links">
+      <a href="index.html">概念図鑑</a>
+      <a href="uc.html" class="on" aria-current="page">作品年表</a>
+    </nav>
+  </header>
+
+  <main class="uc-main">
+    <div class="uc-head">
+      <p class="eyebrow">SF TIMELINE THEATER</p>
+      <h1>作品年表</h1>
+      <p class="lead">SF作品の歴史を、舞台となる宇宙の地図の上で再生します。ガンダムシリーズでは地球・月・ラグランジュ点の地図を使い、地上の出来事では地球にクローズアップします。『銀河英雄伝説』と『スター・ウォーズ』では銀河の地図の上で、戦いの起きた星域や惑星に寄って見せます。右の検索欄から、全作品の出来事をまとめて探せます。</p>
+    </div>
+    <div id="worldTabs" class="world-tabs" role="group" aria-label="作品・暦の選択"></div>
+    <div class="world-head">
+      <h2 id="worldTitle"></h2>
+      <p id="worldIntro"></p>
+    </div>
+
+    <div class="uc-grid">
+      <section class="uc-stage-col">
+        <div id="stage" class="uc-stage">
+          <canvas id="ucCanvas" role="img" aria-label="作品の出来事の地図アニメーション"></canvas>
+        </div>
+        <div class="uc-controls">
+          <button id="prev" type="button" class="tool-btn" aria-label="前の出来事">◀◀</button>
+          <button id="play" type="button" class="tool-btn play">▶ 再生</button>
+          <button id="next" type="button" class="tool-btn" aria-label="次の出来事">▶▶</button>
+          <input id="scrub" type="range" min="0" value="0" step="1" aria-label="年表の位置">
+          <span id="counter" class="counter"></span>
+          <label class="speed-l" for="speed">速さ
+            <select id="speed">
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="2">2×</option>
+            </select>
+          </label>
+        </div>
+        <article id="card" class="uc-card" aria-live="polite"></article>
+      </section>
+
+      <aside class="uc-list-col" aria-label="出来事の一覧">
+        <div class="ev-search" role="search">
+          <label for="evSearch" class="ev-search-l">出来事を探す（全作品から）</label>
+          <div class="ev-search-row">
+            <input type="search" id="evSearch" placeholder="例：シャア、コロニー落とし、イゼルローン、デス・スター" autocomplete="off">
+          </div>
+          <p id="evCount" class="ev-count" aria-live="polite"></p>
+        </div>
+        <ol id="eventList" class="uc-list"></ol>
+      </aside>
+    </div>
+
+    <section class="uc-notes">
+      <h2>地図の見方</h2>
+      <ul>
+        <li>中央が地球、点線の円が月の公転軌道です。月は地球のまわりを回り、それにつれて5つのラグランジュ点（L1〜L5）も回ります。</li>
+        <li>ラグランジュ点は、地球と月の重力と遠心力が釣り合う場所です。宇宙世紀では、ここにスペースコロニー群「サイド」が建設されました（L1：サイド5、L2：サイド3、L3：サイド7、L4：サイド2・6、L5：サイド1・4）。他のガンダム作品でもコロニーの多くはラグランジュ点に置かれています。</li>
+        <li>火星・木星・水星・金星など遠くの天体は、縮尺を無視して地図の端に描いています。</li>
+        <li>『銀河英雄伝説』の地図は、銀河帝国と自由惑星同盟、二つの回廊（イゼルローン回廊・フェザーン回廊）の位置関係をわかりやすくした模式図です。宇宙暦（SE）＝帝国暦（IC）＋309年。</li>
+        <li>『スター・ウォーズ』の地図は、銀河の中心から外側へ広がる地域（コア・ワールド〜アウター・リム）と主なハイパースペース航路を、公式の銀河図のグリッドを参考に模式的に描いたものです。年はヤヴィンの戦いを基準に BBY（前）／ABY（後）で表します。</li>
+        <li>『エヴァンゲリオン』は地球・月の地図で表示し、第3新東京市（箱根）や南極など地上の出来事は地球に寄って見せます。TV版・旧劇場版と新劇場版は別の物語として分けています（使徒の番号も異なります）。</li>
+        <li>『マクロス』は、1999〜2040年の地球圏の出来事を地球・月の地図で、2040年以降の銀河の移民船団の出来事を銀河の模式図で表示します。歌が鍵になる場面では音の輪と音符が広がります。</li>
+        <li>距離や大きさは見やすさを優先した模式図で、実際の縮尺ではありません。日付や設定は作品・資料によって異なる場合があります。</li>
+      </ul>
+      <p class="credit">非公式のファン向け解説ページです。ガンダムシリーズの作品・設定の権利は ©創通・サンライズ（各作品の権利者を含む）に、『銀河英雄伝説』は ©田中芳樹、『スター・ウォーズ』は ©Lucasfilm Ltd.、『エヴァンゲリオン』シリーズは ©カラー（各作品の権利者を含む）、『マクロス』シリーズは ©ビックウエスト（各作品の権利者を含む）に帰属します。</p>
+    </section>
+  </main>
+</body>
+</html>

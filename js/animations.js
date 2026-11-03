@@ -1183,5 +1183,1793 @@
     },
   };
 
+
+  /* 3D ワイヤーフレーム用の投影ヘルパー */
+  function makeProj(view, rot, tilt, cx, cy, sc) {
+    const cr = Math.cos(rot), sr = Math.sin(rot), ct = Math.cos(tilt), st = Math.sin(tilt);
+    return (x, y, z) => {
+      const X = x * cr - y * sr;
+      const Y = x * sr + y * cr;
+      return [cx + X * sc, cy + (Y * ct - z * st) * sc * 0.9, Y * st + z * ct];
+    };
+  }
+
+  /* ================================================================== */
+  /* 11. ワープ航法：アルクビエレ・バブルの膨張率                              */
+  /* ================================================================== */
+  ANIMS.warp = {
+    controls: [
+      { type: "range", id: "v", label: "バブルの速度 v_s（光速の何倍か）", min: -1, max: 2, step: 0.05, value: 0, log: true, unit: "c" },
+      { type: "range", id: "sigma", label: "バブルの壁の鋭さ σ", min: 1, max: 8, step: 0.5, value: 4 },
+    ],
+    create(ctx, view, P) {
+      const stars = makeStars(60);
+      let t = 0, flow = 0;
+      const R = 1;
+      const dfdr = (r, s) => {
+        const sech2 = (u) => 1 / Math.cosh(u) ** 2;
+        return (s * (sech2(s * (r + R)) - sech2(s * (r - R)))) / (2 * Math.tanh(s * R));
+      };
+      const theta = (x, y, s) => {
+        const r = Math.hypot(x, y) || 1e-6;
+        return (x / r) * dfdr(r, s);
+      };
+      return {
+        update(dt) { t += dt; flow += dt * 0.35 * Math.min(3, Math.sqrt(P.v)); },
+        draw() {
+          drawBg(ctx, view, stars, t);
+          const s = P.sigma;
+          const sc = Math.min(view.w * 0.16, view.h * 0.28);
+          const proj = makeProj(view, -0.55 + Math.sin(t * 0.2) * 0.15, 1.0, view.w / 2, view.h * 0.55, sc);
+          const zs = 0.9 / Math.max(0.6, s * 0.45);
+          const L = 3, N = 34;
+          // 進行方向（+x）に沿った線：空間の流れ
+          for (let j = 0; j <= 16; j++) {
+            const y = -L + (2 * L * j) / 16;
+            ctx.beginPath();
+            for (let i = 0; i <= 80; i++) {
+              const x = -L + (2 * L * i) / 80;
+              const z = theta(x, y, s) * zs;
+              const [X, Y] = proj(x, y, z);
+              i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y);
+            }
+            ctx.strokeStyle = "rgba(160,190,255,0.28)"; ctx.lineWidth = 1; ctx.stroke();
+          }
+          // 横断線（後方へ流れていく）
+          const sp = (2 * L) / N;
+          for (let i = 0; i <= N; i++) {
+            let x = -L + ((i * sp - flow) % (2 * L) + 2 * L) % (2 * L);
+            ctx.beginPath();
+            let zmax = 0;
+            for (let j = 0; j <= 60; j++) {
+              const y = -L + (2 * L * j) / 60;
+              const z = theta(x, y, s) * zs;
+              if (Math.abs(z) > Math.abs(zmax)) zmax = z;
+              const [X, Y] = proj(x, y, z);
+              j ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y);
+            }
+            const k = clamp(Math.abs(zmax) * 2.2, 0, 1);
+            ctx.strokeStyle = zmax < 0 ? `rgba(79,160,255,${0.25 + 0.65 * k})` : `rgba(255,95,110,${0.25 + 0.65 * k})`;
+            ctx.lineWidth = 1 + k;
+            ctx.stroke();
+          }
+          // 船
+          const [sx, sy] = proj(0, 0, 0);
+          glow(ctx, sx, sy, 22, "rgba(255,255,255,0.8)");
+          ctx.save(); ctx.translate(sx, sy);
+          const [fx, fy] = proj(0.5, 0, 0);
+          ctx.rotate(Math.atan2(fy - sy, fx - sx));
+          ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-8, -6); ctx.lineTo(-5, 0); ctx.lineTo(-8, 6); ctx.closePath(); ctx.fill();
+          ctx.restore();
+          const [ax, ay] = proj(2.4, 0, 0), [bx, by] = proj(-2.4, 0, 0);
+          label(ctx, "前方：空間が縮む（θ<0）", ax, ay + 30, { align: "center", size: 12, weight: 700, color: COL.cyan });
+          label(ctx, "後方：空間が伸びる（θ>0）", bx, by - 30, { align: "center", size: 12, weight: 700, color: "#ff8090" });
+          label(ctx, "アルクビエレ・バブルの体積膨張率 θ(x, y)", 14, 22, { size: 13, weight: 700 });
+          label(ctx, "船はバブル内で自由落下：加速度も時間の遅れも感じない", 14, 40, { size: 11, color: COL.dim });
+        },
+        readouts() {
+          const v = P.v;
+          const yr = (d) => (d / v < 1 ? `${sci((d / v) * 365.25)} 日` : `${sci(d / v)} 年`);
+          return [
+            ["バブル速度", `${sci(v)} c`],
+            ["プロキシマ・ケンタウリ（4.24光年）まで", yr(4.24)],
+            ["銀河系中心（約2.6万光年）まで", yr(26000)],
+            ["船内の時計の進み", "地球と同じ（時間の遅れなし）"],
+            ["必要なエネルギー", "負（エキゾチック物質が必要）"],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 12. ワームホール：埋め込み図                                             */
+  /* ================================================================== */
+  ANIMS.wormhole = {
+    controls: [
+      { type: "range", id: "b0", label: "喉の半径 b₀", min: 0, max: 6, step: 0.1, value: 0, log: true, unit: "m" },
+      { type: "range", id: "speed", label: "宇宙船の速さ（表示）", min: 0.2, max: 2, step: 0.1, value: 1 },
+    ],
+    create(ctx, view, P) {
+      const stars = makeStars(150);
+      let t = 0, u = 0;
+      return {
+        update(dt) { t += dt; u += dt * 0.18 * P.speed; if (u > 1) u -= 1; },
+        draw() {
+          drawBg(ctx, view, stars, t);
+          const sc = Math.min(view.w * 0.13, view.h * 0.15);
+          const proj = makeProj(view, t * 0.15, 1.18, view.w / 2, view.h / 2, sc);
+          const b = 0.55, rMax = 3.2;
+          const zOf = (r) => b * Math.acosh(Math.max(1, r / b));
+          const segs = [];
+          // 等半径の円（上下）
+          for (const sgn of [1, -1]) {
+            for (let k = 0; k <= 14; k++) {
+              const r = b + (rMax - b) * (k / 14) ** 1.6;
+              const z = sgn * zOf(r);
+              const pts = [];
+              for (let i = 0; i <= 64; i++) { const a = (i / 64) * TAU; pts.push(proj(r * Math.cos(a), r * Math.sin(a), z)); }
+              segs.push({ pts, sgn, k });
+            }
+            // 子午線
+            for (let i = 0; i < 24; i++) {
+              const a = (i / 24) * TAU, pts = [];
+              for (let k = 0; k <= 30; k++) { const r = b + (rMax - b) * (k / 30) ** 1.6; pts.push(proj(r * Math.cos(a), r * Math.sin(a), sgn * zOf(r))); }
+              segs.push({ pts, sgn, k: -1 });
+            }
+          }
+          for (const sg of segs) {
+            ctx.beginPath(); sg.pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+            const fade = sg.k < 0 ? 0.28 : 0.2 + 0.4 * (1 - sg.k / 14);
+            ctx.strokeStyle = sg.sgn > 0 ? `rgba(79,227,255,${fade})` : `rgba(255,95,168,${fade})`;
+            ctx.lineWidth = sg.k === 0 ? 2.2 : 1; ctx.stroke();
+          }
+          // 宇宙船：上の外側 → 喉 → 下の外側（ℓ = -L..L）
+          const Lmax = 2.6, ell = lerp(-Lmax, Lmax, u);
+          const r = Math.sqrt(b * b + ell * ell), a0 = 0.6 + t * 0.15 * 0;
+          const z = Math.sign(ell || 1e-9) * -zOf(r);
+          const [px, py] = proj(r * Math.cos(a0), r * Math.sin(a0), ell < 0 ? zOf(r) : -zOf(r));
+          void z;
+          glow(ctx, px, py, 20, "rgba(255,211,79,0.9)"); dot(ctx, px, py, 4, "#fff");
+          const [tx, ty] = proj(b, 0, 0);
+          label(ctx, "喉（スロート）", tx + 12, ty, { size: 11, color: COL.yel });
+          label(ctx, "宇宙A", 18, 26, { size: 13, weight: 700, color: COL.cyan });
+          label(ctx, "宇宙B（または同じ宇宙の遠く離れた場所）", 18, view.h - 14, { size: 13, weight: 700, color: COL.mag });
+        },
+        readouts() {
+          const b0 = P.b0, M = (b0 * 8.98755e16) / 6.674e-11;
+          return [
+            ["喉の半径 b₀", `${sci(b0)} m`],
+            ["必要な負の質量の目安 b₀c²/G", `${sci(M)} kg`],
+            ["木星質量に換算", `${sci(M / 1.898e27)} 個分`],
+            ["太陽質量に換算", `${sci(M / 1.989e30)} 個分`],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 13. 軌道エレベーター                                                    */
+  /* ================================================================== */
+  const MATERIALS = {
+    steel: { name: "高張力鋼", s: 2.0e9, rho: 7900 },
+    kevlar: { name: "アラミド繊維（ケブラー）", s: 3.6e9, rho: 1440 },
+    zylon: { name: "PBO繊維（ザイロン）", s: 5.8e9, rho: 1560 },
+    cnt: { name: "カーボンナノチューブ（理論値）", s: 6.3e10, rho: 1300 },
+    graphene: { name: "グラフェン（理論値）", s: 1.3e11, rho: 2200 },
+  };
+  ANIMS.spaceelevator = {
+    controls: [
+      { type: "select", id: "mat", label: "ケーブルの材料", value: "cnt", options: Object.entries(MATERIALS).map(([k, m]) => [k, m.name]) },
+      { type: "range", id: "speed", label: "クライマーの速さ（表示）", min: 0.2, max: 3, step: 0.1, value: 1 },
+    ],
+    create(ctx, view, P) {
+      const stars = makeStars(120);
+      const GM = 3.986e14, Re = 6.371e6, w = 7.2921e-5, rg = Math.cbrt(GM / (w * w)), rTop = 1.0e8;
+      const geff = (r) => GM / (r * r) - w * w * r;
+      let t = 0, cl = 0, dir = 1;
+      return {
+        update(dt) {
+          t += dt; cl += dir * dt * 0.06 * P.speed;
+          if (cl > 1) { cl = 1; dir = -1; } if (cl < 0) { cl = 0; dir = 1; }
+        },
+        draw() {
+          drawBg(ctx, view, stars, t);
+          const leftW = view.w * 0.56;
+          const cx = 40 + Math.min(leftW, view.h) * 0.0, cy = view.h / 2;
+          const scale = (leftW - 60) / (rTop / Re); // px per Earth radius
+          const ang = -0.25 + Math.sin(t * 0.25) * 0.2; // 回転する様子（誇張）
+          const toXY = (rRe) => [cx + rRe * scale * Math.cos(ang), cy + rRe * scale * Math.sin(ang)];
+          // 静止軌道
+          ctx.setLineDash([4, 6]); ctx.strokeStyle = "rgba(109,255,156,0.35)";
+          ctx.beginPath(); ctx.arc(cx, cy, (rg / Re) * scale, -1.2, 1.2); ctx.stroke(); ctx.setLineDash([]);
+          // 地球
+          const er = Math.max(6, scale);
+          const eg = ctx.createRadialGradient(cx - er * 0.3, cy - er * 0.3, er * 0.1, cx, cy, er);
+          eg.addColorStop(0, "#7fb8ff"); eg.addColorStop(1, "#1d4f9c");
+          ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(cx, cy, er, 0, TAU); ctx.fill();
+          // ケーブル
+          const [x0, y0] = toXY(1), [x1, y1] = toXY(rTop / Re);
+          ctx.strokeStyle = "#cfd8e8"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+          ctx.fillStyle = "#9aa8cc"; ctx.fillRect(x1 - 5, y1 - 5, 10, 10);
+          label(ctx, "カウンターウェイト", x1, y1 - 12, { align: "right", size: 10, color: COL.dim });
+          const [gx, gy] = toXY(rg / Re);
+          dot(ctx, gx, gy, 4, COL.grn);
+          label(ctx, "静止軌道 36,000 km", gx, gy + 18, { align: "center", size: 10, color: COL.grn });
+          // クライマー（地表〜静止軌道を往復）
+          const rc = Re + (rg - Re) * (cl * cl * (3 - 2 * cl));
+          const [kx, ky] = toXY(rc / Re);
+          glow(ctx, kx, ky, 14, "rgba(255,211,79,0.9)"); dot(ctx, kx, ky, 3.5, "#fff");
+          label(ctx, "北極上空から見た図（回転は誇張）", 14, 22, { size: 12, color: COL.dim });
+
+          // 実効重力グラフ
+          const gx0 = leftW + 30, gw = view.w - gx0 - 20, gy0 = 40, gh = view.h - 90;
+          const rMaxG = 6e7;
+          const X = (r) => gx0 + ((r - Re) / (rMaxG - Re)) * gw;
+          const gMax = 9.8;
+          const Y = (g) => gy0 + gh / 2 - (g / gMax) * (gh / 2) * 0.95;
+          ctx.strokeStyle = "rgba(160,190,255,0.3)"; ctx.lineWidth = 1; ctx.strokeRect(gx0, gy0, gw, gh);
+          ctx.beginPath(); ctx.moveTo(gx0, Y(0)); ctx.lineTo(gx0 + gw, Y(0)); ctx.stroke();
+          ctx.strokeStyle = COL.cyan; ctx.lineWidth = 2; ctx.beginPath();
+          for (let i = 0; i <= 200; i++) { const r = Re + ((rMaxG - Re) * i) / 200; const yy = Y(geff(r)); i ? ctx.lineTo(X(r), yy) : ctx.moveTo(X(r), yy); }
+          ctx.stroke();
+          ctx.setLineDash([3, 4]); ctx.strokeStyle = COL.grn; ctx.beginPath(); ctx.moveTo(X(rg), gy0); ctx.lineTo(X(rg), gy0 + gh); ctx.stroke(); ctx.setLineDash([]);
+          dot(ctx, X(rc), Y(geff(rc)), 5, COL.yel);
+          label(ctx, "実効重力 g_eff (m/s²)", gx0, gy0 - 10, { size: 11, color: COL.dim });
+          label(ctx, "9.8", gx0 - 4, Y(9.8) + 4, { size: 10, color: COL.dim, align: "right" });
+          label(ctx, "0", gx0 - 4, Y(0) + 4, { size: 10, color: COL.dim, align: "right" });
+          label(ctx, "地表", gx0, gy0 + gh + 14, { size: 10, color: COL.dim });
+          label(ctx, "静止軌道", X(rg), gy0 + gh + 14, { size: 10, color: COL.grn, align: "center" });
+          label(ctx, "6万km", gx0 + gw, gy0 + gh + 14, { size: 10, color: COL.dim, align: "right" });
+          label(ctx, "↑ 下向き（地球へ）", gx0 + 6, gy0 + 14, { size: 10, color: COL.dim });
+          label(ctx, "↓ 上向き（宇宙へ）", gx0 + 6, gy0 + gh - 6, { size: 10, color: COL.dim });
+        },
+        readouts() {
+          const m = MATERIALS[P.mat];
+          const dPhi = (-GM / rg - (w * w * rg * rg) / 2) - (-GM / Re - (w * w * Re * Re) / 2);
+          const taper = Math.exp((m.rho / m.s) * dPhi);
+          const rc = Re + (rg - Re) * (cl * cl * (3 - 2 * cl));
+          return [
+            ["比強度 σ/ρ", `${sci(m.s / m.rho / 1e6)} MJ/kg`],
+            ["破断長 σ/(ρg)", `${sci(m.s / (m.rho * 9.81) / 1000)} km`],
+            ["必要なテーパー比 A(静止軌道)/A(地表)", Math.log10(taper) > 300 ? "∞（計算不能なほど巨大）" : sci(taper)],
+            ["クライマーの高度", `${sci((rc - Re) / 1000)} km`],
+            ["その高さの実効重力", `${(geff(rc) / 9.81).toFixed(3)} g`],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 14. スペースコロニー：回転による人工重力とコリオリ力                       */
+  /* ================================================================== */
+  ANIMS.colony = {
+    controls: [
+      { type: "range", id: "r", label: "半径 r", min: 1, max: 4, step: 0.02, value: 3.5, log: true, unit: "m" },
+      { type: "range", id: "rpm", label: "回転数", min: 0.1, max: 10, step: 0.01, value: 0.53, unit: "rpm" },
+      { type: "select", id: "frame", label: "見る立場", value: "rotating", options: [["rotating", "住民から（回転系）"], ["inertial", "外から（慣性系）"]] },
+      { type: "button", id: "drop", label: "塔の上からボールを落とす" },
+    ],
+    create(ctx, view, P) {
+      const stars = makeStars(80);
+      let t = 0, phi = 0;
+      let ball = null; // 慣性系での位置（半径1で正規化）
+      const H = 0.32; // 塔の高さ（半径に対する割合）
+      const TV = 8; // 表示上の1回転の秒数
+      const omegaVis = () => TAU / TV;
+      const people = Array.from({ length: 14 }, (_, i) => (i / 14) * TAU + rand(-0.1, 0.1));
+      const towerAng = -Math.PI / 2;
+      return {
+        action(id) {
+          if (id !== "drop") return;
+          const a = towerAng + phi, rr = 1 - H, w = omegaVis();
+          ball = { x: rr * Math.cos(a), y: rr * Math.sin(a), vx: -w * rr * Math.sin(a), vy: w * rr * Math.cos(a), landed: false, trail: [], t0: t, tLand: 0 };
+        },
+        update(dt) {
+          t += dt; phi += omegaVis() * dt;
+          if (ball && !ball.landed) {
+            ball.x += ball.vx * dt; ball.y += ball.vy * dt;
+            if (Math.hypot(ball.x, ball.y) >= 1) { const k = 1 / Math.hypot(ball.x, ball.y); ball.x *= k; ball.y *= k; ball.landed = true; ball.tLand = t; ball.phiLand = phi; }
+            ball.trail.push([ball.x, ball.y, phi]);
+          }
+          if (ball && ball.landed && t - ball.tLand > 3) ball = null;
+        },
+        draw() {
+          drawBg(ctx, view, stars, t);
+          const R = Math.min(view.w * 0.36, view.h * 0.42), cx = view.w * 0.42, cy = view.h / 2;
+          const rotFrame = P.frame === "rotating";
+          const view_ang = rotFrame ? 0 : phi; // 描画上の回転
+          const tf = (x, y, ph) => { // 慣性系の点 → 表示座標
+            const a = rotFrame ? -ph : 0;
+            const X = x * Math.cos(a) - y * Math.sin(a), Y = x * Math.sin(a) + y * Math.cos(a);
+            return [cx + X * R, cy + Y * R];
+          };
+          // 地面（内壁）
+          ctx.lineWidth = 16; ctx.strokeStyle = "#2c3a5e"; ctx.beginPath(); ctx.arc(cx, cy, R + 8, 0, TAU); ctx.stroke();
+          ctx.lineWidth = 3; ctx.strokeStyle = "#5aa86a"; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+          // 回転の目印（スポーク）
+          for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * TAU + view_ang;
+            ctx.strokeStyle = "rgba(160,190,255,0.12)"; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + R * Math.cos(a), cy + R * Math.sin(a)); ctx.stroke();
+          }
+          glow(ctx, cx, cy, 30, "rgba(255,240,180,0.5)");
+          // 住民
+          for (const p0 of people) {
+            const a = p0 + view_ang;
+            const fx = cx + R * Math.cos(a), fy = cy + R * Math.sin(a);
+            const hx = cx + (R - 14) * Math.cos(a), hy = cy + (R - 14) * Math.sin(a);
+            ctx.strokeStyle = "#ffd9b8"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(hx, hy); ctx.stroke();
+            dot(ctx, cx + (R - 17) * Math.cos(a), cy + (R - 17) * Math.sin(a), 3, "#ffd9b8");
+          }
+          // 塔
+          const ta = towerAng + view_ang;
+          ctx.strokeStyle = "#cfd8e8"; ctx.lineWidth = 4;
+          ctx.beginPath(); ctx.moveTo(cx + R * Math.cos(ta), cy + R * Math.sin(ta)); ctx.lineTo(cx + R * (1 - H) * Math.cos(ta), cy + R * (1 - H) * Math.sin(ta)); ctx.stroke();
+          label(ctx, "塔", cx + R * (1 - H / 2) * Math.cos(ta) + 10, cy + R * (1 - H / 2) * Math.sin(ta), { size: 11, color: COL.dim });
+          // 真下の地点（塔の根元）
+          // ボール
+          if (ball) {
+            ctx.strokeStyle = COL.yel; ctx.lineWidth = 2; ctx.beginPath();
+            ball.trail.forEach(([x, y, ph], i) => { const [X, Y] = tf(x, y, ph); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+            ctx.stroke();
+            const [bx, by] = tf(ball.x, ball.y, ball.landed ? ball.phiLand : phi);
+            if (!(rotFrame && ball.landed)) dot(ctx, bx, by, 5, COL.yel);
+            else { const lp = ball.trail[ball.trail.length - 1]; const [X, Y] = tf(lp[0], lp[1], lp[2]); dot(ctx, X, Y, 5, COL.yel); }
+          }
+          // 回転方向
+          arrow(ctx, cx + (R + 30) * Math.cos(0.3), cy + (R + 30) * Math.sin(0.3), cx + (R + 30) * Math.cos(0.6), cy + (R + 30) * Math.sin(0.6), "rgba(160,190,255,0.6)", 2);
+          label(ctx, rotFrame ? "住民から見た図（コロニーは止まって見える）" : "外から見た図（コロニーが回転）", 14, 22, { size: 13, weight: 700 });
+          const g = ((TAU * P.rpm) / 60) ** 2 * P.r / 9.81;
+          label(ctx, `人工重力 ${g.toFixed(2)} g`, view.w - 14, 22, { size: 15, weight: 800, align: "right", color: g > 0.8 && g < 1.2 ? COL.grn : COL.org });
+          label(ctx, `表示は実時間の約 ${sci((60 / P.rpm) / TV)} 倍速`, view.w - 14, 40, { size: 11, align: "right", color: COL.dim });
+        },
+        readouts() {
+          const w = (TAU * P.rpm) / 60, g = w * w * P.r;
+          const rpm1g = (Math.sqrt(9.81 / P.r) * 60) / TAU;
+          return [
+            ["人工重力 a = ω²r", `${(g / 9.81).toFixed(3)} g（${g.toFixed(2)} m/s²）`],
+            ["1回転の時間", `${sci(60 / P.rpm)} 秒`],
+            ["内壁の速さ", `${sci(w * P.r)} m/s`],
+            ["この半径で1 gになる回転数", `${rpm1g.toFixed(2)} rpm`],
+            ["頭と足の重力差（身長1.7 m）", `${((1.7 / P.r) * 100).toFixed(2)} %`],
+            ["快適性の目安（2 rpm以下）", P.rpm <= 2 ? "快適" : P.rpm <= 4 ? "慣れが必要" : "めまいが強い"],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 15. ダイソン球                                                         */
+  /* ================================================================== */
+  ANIMS.dyson = {
+    controls: [
+      { type: "range", id: "f", label: "被覆率 f", min: 0, max: 100, step: 1, value: 40, unit: "%" },
+      { type: "range", id: "rAU", label: "コレクターの軌道半径", min: 0.2, max: 3, step: 0.05, value: 1, unit: "AU" },
+    ],
+    create(ctx, view, P) {
+      const stars = makeStars(120);
+      let t = 0;
+      const sats = Array.from({ length: 900 }, () => ({ inc: rand(-1.4, 1.4), node: rand(0, TAU), ph: rand(0, TAU), sp: rand(0.15, 0.4), rr: rand(0.92, 1.08) }));
+      const Lsun = 3.828e26, sig = 5.670e-8, AU = 1.496e11;
+      const shellT = () => Math.pow(Lsun / (4 * Math.PI * (P.rAU * AU) ** 2 * sig), 0.25);
+      return {
+        update(dt) { t += dt; },
+        draw() {
+          drawBg(ctx, view, stars, t);
+          const f = P.f / 100;
+          const cx = view.w * 0.27, cy = view.h * 0.5, Rv = Math.min(view.w * 0.2, view.h * 0.36) * (0.55 + 0.45 * P.rAU / 3);
+          glow(ctx, cx, cy, Rv * 0.9, `rgba(255,220,120,${0.9 * (1 - f) + 0.05})`);
+          dot(ctx, cx, cy, Rv * 0.16, `rgba(255,243,192,${1 - f * 0.85})`);
+          // 赤外の輝き
+          glow(ctx, cx, cy, Rv * 1.35, `rgba(255,80,40,${0.55 * f})`);
+          const n = Math.round(sats.length * f);
+          for (let i = 0; i < n; i++) {
+            const s = sats[i];
+            const a = s.ph + t * s.sp;
+            const x0 = Math.cos(a), y0 = Math.sin(a);
+            const y1 = y0 * Math.cos(s.inc), z1 = y0 * Math.sin(s.inc);
+            const X = x0 * Math.cos(s.node) - y1 * Math.sin(s.node), Y = x0 * Math.sin(s.node) + y1 * Math.cos(s.node);
+            const px = cx + X * Rv * s.rr, py = cy + (Y * 0.45 + z1 * 0.85) * Rv * s.rr;
+            const front = Y > 0;
+            ctx.fillStyle = front ? "rgba(140,170,220,0.95)" : "rgba(255,140,90,0.55)";
+            ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+          }
+          label(ctx, `コレクター ${n} 基（表示上）`, cx, view.h - 14, { align: "center", size: 11, color: COL.dim });
+
+          // スペクトル
+          const gx = view.w * 0.54, gw = view.w * 0.42, gy = 46, gh = view.h - 100;
+          ctx.strokeStyle = "rgba(160,190,255,0.3)"; ctx.lineWidth = 1; ctx.strokeRect(gx, gy, gw, gh);
+          const lmin = -1, lmax = 2.3; // log10(μm)
+          const X = (l) => gx + ((l - lmin) / (lmax - lmin)) * gw;
+          const shape = (lumFrac, T, l) => { const lam = 10 ** l * 1e-6; const x = (6.626e-34 * 2.998e8) / (lam * 1.381e-23 * T); return x > 700 ? 0 : (lumFrac * (15 / Math.PI ** 4) * x ** 4) / Math.expm1(x); };
+          const Ts = shellT();
+          const peak = 0.75;
+          const Y = (v) => gy + gh - (v / peak) * gh * 0.95;
+          // 可視光帯
+          ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.fillRect(X(Math.log10(0.38)), gy, X(Math.log10(0.75)) - X(Math.log10(0.38)), gh);
+          label(ctx, "可視光", (X(Math.log10(0.38)) + X(Math.log10(0.75))) / 2, gy + 14, { size: 10, align: "center", color: COL.dim });
+          const curve = (fn, col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); for (let i = 0; i <= 240; i++) { const l = lmin + ((lmax - lmin) * i) / 240; const yy = Y(fn(l)); i ? ctx.lineTo(X(l), yy) : ctx.moveTo(X(l), yy); } ctx.stroke(); };
+          curve((l) => shape(1 - f, 5772, l), "rgba(255,220,120,0.9)", 1.5);
+          curve((l) => shape(f, Ts, l), "rgba(255,110,70,0.9)", 1.5);
+          curve((l) => shape(1 - f, 5772, l) + shape(f, Ts, l), "#fff", 2.2);
+          for (const v of [0.1, 1, 10, 100]) label(ctx, `${v}`, X(Math.log10(v)), gy + gh + 14, { size: 10, align: "center", color: COL.dim });
+          label(ctx, "波長 λ (μm)", gx + gw, gy + gh + 28, { size: 10, align: "right", color: COL.dim });
+          label(ctx, "外から見たスペクトル λL_λ", gx, gy - 12, { size: 11, color: COL.dim });
+          label(ctx, "— 恒星の光（透過分）", gx + gw - 6, gy + 30, { size: 10, align: "right", color: "rgba(255,220,120,0.9)" });
+          label(ctx, `— コレクターの熱放射（${Ts.toFixed(0)} K）`, gx + gw - 6, gy + 44, { size: 10, align: "right", color: "rgba(255,110,70,0.95)" });
+          label(ctx, "— 合計", gx + gw - 6, gy + 58, { size: 10, align: "right", color: "#fff" });
+        },
+        readouts() {
+          const P_ = (P.f / 100) * Lsun, T = shellT();
+          return [
+            ["集めるエネルギー", `${sci(P_)} W`],
+            ["人類の消費量（約19 TW）の", `${sci(P_ / 1.9e13)} 倍`],
+            ["コレクターの温度", `${T.toFixed(0)} K（${(T - 273.15).toFixed(0)} °C）`],
+            ["熱放射のピーク波長", `${(2898 / T).toFixed(1)} μm`],
+            ["カルダシェフ指数 K", P_ > 0 ? ((Math.log10(P_) - 6) / 10).toFixed(2) : "—"],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 16. コールドスリープ：結晶化とガラス化                                    */
+  /* ================================================================== */
+  ANIMS.coldsleep = {
+    controls: [
+      { type: "range", id: "rate", label: "冷却速度", min: 0, max: 5, step: 0.1, value: 2, log: true, unit: "°C/分" },
+      { type: "select", id: "cpa", label: "凍結保護剤", value: "yes", options: [["yes", "高濃度で使う（ガラス化液）"], ["no", "使わない"]] },
+    ],
+    create(ctx, view, P) {
+      let t = 0, temp = 37, mode = null, crystals = [], phase = 0;
+      const N = 240;
+      const mol = Array.from({ length: N }, () => {
+        const a = rand(0, TAU), r = Math.sqrt(Math.random()) * 0.95;
+        return { bx: r * Math.cos(a), by: r * Math.sin(a), x: 0, y: 0, ph: rand(0, TAU), lock: null };
+      });
+      const critical = () => (P.cpa === "yes" ? 2.5 : 1e7); // °C/分
+      const reset = () => {
+        temp = 37; phase = 0; crystals = []; mode = null;
+        mol.forEach((m) => (m.lock = null));
+      };
+      reset();
+      return {
+        update(dt) {
+          t += dt; phase += dt;
+          if (phase < 1) temp = 37;
+          else if (temp > -196) temp = Math.max(-196, 37 - (phase - 1) * 45);
+          else if (phase > 9.5) reset();
+          if (mode === null && temp < (P.cpa === "yes" ? -40 : -5)) {
+            mode = P.rate >= critical() ? "glass" : "crystal";
+            if (mode === "crystal") for (let i = 0; i < 4; i++) crystals.push({ x: rand(-0.4, 0.4), y: rand(-0.4, 0.4), a: rand(0, TAU), len: 0 });
+          }
+          if (mode === "crystal") for (const c of crystals) c.len = Math.min(0.5, c.len + dt * 0.18 * clamp(Math.log10(1e3 / P.rate + 1), 0.4, 1.6));
+        },
+        draw() {
+          ctx.fillStyle = "#06101c"; ctx.fillRect(0, 0, view.w, view.h);
+          const R = Math.min(view.w * 0.3, view.h * 0.4), cx = view.w * 0.38, cy = view.h / 2;
+          const cold = clamp((37 - temp) / 233, 0, 1);
+          // 細胞膜
+          const broken = mode === "crystal" && crystals.some((c) => c.len > 0.38);
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = broken ? COL.red : mode === "glass" ? COL.cyan : "#ffb3c8";
+          ctx.beginPath();
+          for (let i = 0; i <= 120; i++) {
+            const a = (i / 120) * TAU;
+            let rr = 1 + 0.02 * Math.sin(a * 5 + t);
+            if (broken) for (const c of crystals) for (let k = 0; k < 6; k++) {
+              const ca = c.a + (k * Math.PI) / 3;
+              const tipx = c.x + Math.cos(ca) * c.len * 1.4, tipy = c.y + Math.sin(ca) * c.len * 1.4;
+              if (Math.hypot(tipx, tipy) > 0.95) { const d = Math.abs(((a - Math.atan2(tipy, tipx) + 3 * Math.PI) % TAU) - Math.PI); if (d < 0.08) rr += 0.12 * (1 - d / 0.08); }
+            }
+            const X = cx + Math.cos(a) * R * rr, Y = cy + Math.sin(a) * R * rr;
+            i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y);
+          }
+          ctx.stroke();
+          // 結晶
+          if (mode === "crystal") {
+            for (const c of crystals) {
+              for (let k = 0; k < 6; k++) {
+                const ca = c.a + (k * Math.PI) / 3, L = c.len * 1.4;
+                const x0 = cx + c.x * R, y0 = cy + c.y * R;
+                ctx.strokeStyle = "rgba(220,240,255,0.95)"; ctx.lineWidth = 2.5;
+                ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + Math.cos(ca) * L * R, y0 + Math.sin(ca) * L * R); ctx.stroke();
+                for (let s = 0.3; s < 1; s += 0.25) {
+                  const bx = x0 + Math.cos(ca) * L * R * s, by = y0 + Math.sin(ca) * L * R * s, bl = L * R * 0.25 * (1 - s);
+                  ctx.lineWidth = 1.5;
+                  for (const sg of [-1, 1]) { ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ca + sg * 0.9) * bl, by + Math.sin(ca + sg * 0.9) * bl); ctx.stroke(); }
+                }
+              }
+            }
+          }
+          // 水分子
+          const amp = mode === "glass" || mode === "crystal" ? 0 : 0.035 * (1 - cold) + 0.004;
+          for (const m of mol) {
+            let x = m.bx + Math.sin(t * 7 + m.ph) * amp, y = m.by + Math.cos(t * 6 + m.ph * 1.3) * amp;
+            if (mode === "crystal") {
+              let best = null, bd = 1e9;
+              for (const c of crystals) { const d = Math.hypot(m.bx - c.x, m.by - c.y); if (d < c.len * 1.2 && d < bd) { bd = d; best = c; } }
+              if (best) { const ang = Math.round((Math.atan2(m.by - best.y, m.bx - best.x) - best.a) / (Math.PI / 3)) * (Math.PI / 3) + best.a; x = best.x + Math.cos(ang) * bd; y = best.y + Math.sin(ang) * bd; }
+            }
+            const col = mode === "glass" ? "rgba(140,220,255,0.85)" : mode === "crystal" ? "rgba(200,225,255,0.8)" : `rgba(${lerp(255, 120, cold)},${lerp(140, 190, cold)},${lerp(120, 255, cold)},0.85)`;
+            dot(ctx, cx + x * R, cy + y * R, 2.6, col);
+          }
+          // 温度計
+          const tx = view.w * 0.78, ty0 = 40, ty1 = view.h - 50;
+          const TY = (T) => lerp(ty1, ty0, (T + 196) / 233);
+          ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.fillRect(tx - 6, ty0, 12, ty1 - ty0);
+          ctx.fillStyle = temp > 0 ? COL.org : COL.cyan; ctx.fillRect(tx - 6, TY(temp), 12, ty1 - TY(temp));
+          for (const [T, nm] of [[37, "37 °C 体温"], [0, "0 °C"], [-130, "−130 °C ガラス転移付近"], [-196, "−196 °C 液体窒素"]]) {
+            ctx.strokeStyle = COL.dim; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tx - 10, TY(T)); ctx.lineTo(tx + 10, TY(T)); ctx.stroke();
+            label(ctx, nm, tx + 14, TY(T) + 4, { size: 10, color: COL.dim });
+          }
+          label(ctx, `${temp.toFixed(0)} °C`, tx, ty0 - 12, { size: 16, weight: 800, align: "center" });
+          const msg = mode === "glass" ? "ガラス化：結晶ができず、細胞はそのままの形で固まった" : mode === "crystal" ? (broken ? "氷の結晶が細胞膜を突き破った" : "氷の結晶が成長中…") : temp > 0 ? "冷却中：分子の熱運動が弱まっていく" : "0 °C以下に冷却中…";
+          label(ctx, msg, 14, view.h - 14, { size: 12, weight: 700, color: mode === "glass" ? COL.cyan : broken ? COL.red : COL.text });
+          label(ctx, "細胞の模式図（点は水分子）", 14, 22, { size: 12, color: COL.dim });
+        },
+        readouts() {
+          const q = temp > 0 ? Math.pow(2.5, (temp - 37) / 10) : 0;
+          return [
+            ["現在の温度", `${temp.toFixed(0)} °C`],
+            ["代謝の速さ（37 °C比, Q₁₀=2.5）", temp > 0 ? `${(q * 100).toFixed(1)} %` : "ほぼ停止"],
+            ["冷却速度", `${sci(P.rate)} °C/分`],
+            ["ガラス化に必要な臨界速度", P.cpa === "yes" ? "約2.5 °C/分（VS55などの例）" : "約10⁷ °C/分以上（純水）"],
+            ["結果", mode === null ? "—" : mode === "glass" ? "ガラス化" : "結晶化（細胞損傷）"],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 17. タイムパラドックス：ポルチンスキーのビリヤード                         */
+  /* ================================================================== */
+  ANIMS.timeparadox = {
+    controls: [
+      { type: "select", id: "mode", label: "衝突のしかた", value: "consistent", options: [["consistent", "かすめて当たる（自己無撞着な解）"], ["paradox", "正面から当たる（矛盾）"]] },
+      { type: "range", id: "speed", label: "再生速度", min: 0.3, max: 2, step: 0.1, value: 1 },
+    ],
+    create(ctx, view, P) {
+      let t = 0;
+      const T = 6; // 1サイクル（任意時間単位）
+      const A = [0.8, 0.5], B = [0.2, 0.22], C = [0.47, 0.62], Y0 = [0.06, 0.9];
+      const OFF = [0.62, 0.02], AWAY = [0.15, 1.15];
+      const tau = 3; // A に入ると τ だけ過去の B から出る
+      const seg = (p, q, s) => [lerp(p[0], q[0], s), lerp(p[1], q[1], s)];
+      // 若い玉：0→2でY0→C、2→4でC→A（一貫）／C→AWAY（矛盾）
+      const young = (tt) => {
+        if (tt < 2) return seg(Y0, C, tt / 2);
+        if (P.mode === "consistent") return tt < 4 ? seg(C, A, (tt - 2) / 2) : null;
+        return tt < 4.5 ? seg(C, AWAY, (tt - 2) / 2.5) : null;
+      };
+      // 年老いた玉：4−τ=1 でBから出る → 2でC → 2→4でOFFへ
+      const old = (tt) => {
+        if (tt < 4 - tau) return null;
+        if (tt < 2) return seg(B, C, (tt - 1) / 1);
+        return tt < 4.5 ? seg(C, OFF, (tt - 2) / 2.5) : null;
+      };
+      return {
+        update(dt) { t = (t + dt * P.speed) % (T + 1); },
+        draw() {
+          ctx.fillStyle = "#0b2a1f"; ctx.fillRect(0, 0, view.w, view.h);
+          const pad = 30, W = view.w - 2 * pad, H = view.h - 2 * pad - 30;
+          const S = (p) => [pad + p[0] * W, pad + 30 + p[1] * H];
+          ctx.strokeStyle = "#5a3b1e"; ctx.lineWidth = 8; ctx.strokeRect(pad - 4, pad + 26, W + 8, H + 8);
+          // ワームホールの口
+          const mouth = (p, name, col) => { const [x, y] = S(p); glow(ctx, x, y, 40, col, 0.7 + 0.2 * Math.sin(t * 4)); ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 16, 0, TAU); ctx.stroke(); label(ctx, name, x, y + 34, { align: "center", size: 11, weight: 700 }); };
+          mouth(A, "入口A（未来側）", "rgba(255,95,168,0.8)");
+          mouth(B, `出口B（${tau}秒前に出る）`, "rgba(79,227,255,0.8)");
+          // 予定軌道（薄く）
+          ctx.setLineDash([4, 6]); ctx.lineWidth = 1.2;
+          const path = (pts, col) => { ctx.strokeStyle = col; ctx.beginPath(); pts.forEach((p, i) => { const [x, y] = S(p); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke(); };
+          path([Y0, C, P.mode === "consistent" ? A : AWAY], "rgba(255,211,79,0.4)");
+          path([B, C, OFF], "rgba(255,140,60,0.4)");
+          ctx.setLineDash([]);
+          const tt = Math.min(t, T);
+          const y = young(tt), o = old(tt);
+          const contradiction = P.mode === "paradox" && tt > 2;
+          if (y) { const [x, yy] = S(y); dot(ctx, x, yy, 9, COL.yel); label(ctx, "若い玉", x, yy - 14, { align: "center", size: 11, weight: 700, color: COL.yel }); }
+          if (o) {
+            const [x, yy] = S(o);
+            ctx.globalAlpha = contradiction ? 0.35 + 0.35 * Math.abs(Math.sin(t * 10)) : 1;
+            dot(ctx, x, yy, 9, COL.org);
+            label(ctx, "未来から来た玉", x, yy - 14, { align: "center", size: 11, weight: 700, color: COL.org });
+            ctx.globalAlpha = 1;
+          }
+          if (Math.abs(tt - 2) < 0.12) { const [x, yy] = S(C); glow(ctx, x, yy, 30, "rgba(255,255,255,0.9)"); }
+          label(ctx, `時刻 t = ${tt.toFixed(2)}`, pad, 22, { size: 14, weight: 800 });
+          if (contradiction) {
+            label(ctx, "矛盾！ 若い玉は入口Aに入らない → 未来から来た玉は存在できない", view.w - pad, 22, { align: "right", size: 12, weight: 800, color: COL.red });
+          } else if (P.mode === "consistent" && tt > 2) {
+            label(ctx, "若い玉は少しそれただけで入口Aへ → 歴史は一貫している", view.w - pad, 22, { align: "right", size: 12, weight: 700, color: COL.grn });
+          }
+        },
+        readouts() {
+          const tt = Math.min(t, T);
+          return [
+            ["時刻", tt.toFixed(2)],
+            ["タイムマシンの時間差 τ", `${tau}`],
+            ["若い玉が入口Aに入る時刻", P.mode === "consistent" ? "4.00 → 出口Bから 1.00 に出る" : "入らない"],
+            ["この歴史は", P.mode === "consistent" ? "自己無撞着（実現しうる）" : "矛盾（実現しない）"],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 18. フェルミのパラドックス：ドレイクの方程式                              */
+  /* ================================================================== */
+  ANIMS.fermi = {
+    controls: [
+      { type: "range", id: "R", label: "R*：1年に生まれる恒星の数", min: 0.5, max: 10, step: 0.5, value: 1.5, unit: "個/年" },
+      { type: "range", id: "fp", label: "f_p：惑星をもつ割合", min: 0.1, max: 1, step: 0.05, value: 1 },
+      { type: "range", id: "ne", label: "n_e：生命が住める惑星の数", min: 0.01, max: 1, step: 0.01, value: 0.2 },
+      { type: "range", id: "fl", label: "f_l：生命が誕生する割合", min: -6, max: 0, step: 0.1, value: -1, log: true },
+      { type: "range", id: "fi", label: "f_i：知性が生まれる割合", min: -6, max: 0, step: 0.1, value: -1, log: true },
+      { type: "range", id: "fc", label: "f_c：通信技術をもつ割合", min: -3, max: 0, step: 0.1, value: -1, log: true },
+      { type: "range", id: "L", label: "L：通信を続ける年数", min: 1, max: 9, step: 0.1, value: 4, log: true, unit: "年" },
+    ],
+    create(ctx, view, P) {
+      let t = 0;
+      const gstars = Array.from({ length: 1600 }, () => {
+        const arm = Math.floor(Math.random() * 2), r = Math.pow(Math.random(), 0.7);
+        const a = arm * Math.PI + r * 5.5 + rand(-0.35, 0.35) * (1 - r * 0.4);
+        return { r, a, b: rand(0.2, 0.8) };
+      });
+      const civs = Array.from({ length: 400 }, () => { const s = gstars[Math.floor(Math.random() * gstars.length)]; return { r: s.r, a: s.a, ph: Math.random() }; });
+      const Ncalc = () => P.R * P.fp * P.ne * P.fl * P.fi * P.fc * P.L;
+      return {
+        update(dt) { t += dt; },
+        draw() {
+          ctx.fillStyle = "#03050c"; ctx.fillRect(0, 0, view.w, view.h);
+          const cx = view.w * 0.5, cy = view.h * 0.5, R = Math.min(view.w * 0.42, view.h * 0.46);
+          const rot = t * 0.03;
+          glow(ctx, cx, cy, R * 0.35, "rgba(255,230,180,0.45)");
+          for (const s of gstars) {
+            const a = s.a + rot, x = cx + Math.cos(a) * s.r * R, y = cy + Math.sin(a) * s.r * R * 0.62;
+            ctx.fillStyle = `rgba(200,210,255,${s.b * 0.6})`; ctx.fillRect(x, y, 1.3, 1.3);
+          }
+          const N = Ncalc();
+          let shown = N >= 1 ? Math.min(civs.length, Math.round(N)) : (Math.random() < N * 0.02 ? 1 : 0);
+          if (N < 1) shown = 0;
+          const bubble = clamp(Math.log10(P.L) / 9, 0.05, 1) * R * 0.18;
+          for (let i = 0; i < shown; i++) {
+            const c = civs[i], a = c.a + rot;
+            const x = cx + Math.cos(a) * c.r * R, y = cy + Math.sin(a) * c.r * R * 0.62;
+            const ph = (t * 0.4 + c.ph) % 1;
+            ctx.strokeStyle = `rgba(109,255,156,${0.5 * (1 - ph)})`; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.ellipse(x, y, bubble * ph + 1, (bubble * ph + 1) * 0.62, 0, 0, TAU); ctx.stroke();
+            dot(ctx, x, y, 2.4, COL.grn);
+          }
+          // 地球
+          const ea = 0.9 + rot, ex = cx + Math.cos(ea) * 0.55 * R, ey = cy + Math.sin(ea) * 0.55 * R * 0.62;
+          dot(ctx, ex, ey, 3.5, COL.cyan); label(ctx, "地球", ex + 8, ey + 4, { size: 11, color: COL.cyan });
+          label(ctx, `N = ${sci(N)}`, 14, 30, { size: 22, weight: 800, color: N >= 1 ? COL.grn : COL.org });
+          label(ctx, N >= 1 ? "銀河系で今、電波を出している文明の数" : "銀河系にいま交信可能な文明はほぼ「いない」", 14, 50, { size: 11, color: COL.dim });
+          if (N > civs.length) label(ctx, `（表示は ${civs.length} 個まで）`, 14, 66, { size: 10, color: COL.dim });
+        },
+        readouts() {
+          const N = Ncalc();
+          const V = Math.PI * 5e4 ** 2 * 1e3;
+          const d = N >= 1 ? Math.cbrt(V / N) : NaN;
+          return [
+            ["N（交信可能な文明の数）", sci(N)],
+            ["文明どうしの平均距離", N >= 1 ? `${sci(d)} 光年` : "—"],
+            ["往復の通信時間 vs 寿命 L", N >= 1 ? (2 * d < P.L ? `${sci(2 * d)} 年 < L：会話できる` : `${sci(2 * d)} 年 > L：返事が来る前に滅ぶ`) : "—"],
+            ["光速の1%で銀河を植民するのに", "約1,000万年（銀河の年齢の0.1%）"],
+          ];
+        },
+      };
+    },
+  };
+
+
+  /* ================================================================== */
+  /* 19. ブラックホール：光の曲がり方                                       */
+  /* ================================================================== */
+  ANIMS.blackhole = {
+    controls: [
+      { type: "range", id: "M", label: "質量", min: 0, max: 10, step: 0.1, value: 1, log: true, unit: "太陽質量" },
+      { type: "range", id: "r", label: "観測者の距離 r（シュヴァルツシルト半径の何倍か）", min: 1.01, max: 10, step: 0.01, value: 1.5 },
+    ],
+    create(ctx, view, P) {
+      const stars = makeStars(160);
+      let t = 0;
+      // 光線（シュヴァルツシルト半径 = 1 の単位）：u'' + u = 1.5 u²
+      const rays = [];
+      for (let i = 0; i < 26; i++) {
+        const b = 0.6 + i * 0.32;
+        const pts = [];
+        const r0 = Math.hypot(30, b), phi0 = Math.asin(b / r0);
+        let u = 1 / r0, du = Math.cos(phi0) / b, phi = phi0, captured = false;
+        // 初期：x=-30 付近から +x 方向へ
+        const h = 0.004;
+        for (let s = 0; s < 6000; s++) {
+          const r = 1 / u;
+          pts.push([-r * Math.cos(phi), r * Math.sin(phi)]);
+          // RK2
+          const a1 = 1.5 * u * u - u;
+          const um = u + du * h / 2, dum = du + a1 * h / 2;
+          const a2 = 1.5 * um * um - um;
+          u += dum * h; du += a2 * h; phi += h;
+          if (u > 1) { captured = true; break; }
+          if (u < 1 / 32 && du < 0) break;
+        }
+        rays.push({ pts, captured, b });
+      }
+      const bc = 1.5 * Math.sqrt(3);
+      return {
+        update(dt) { t += dt; },
+        draw() {
+          drawBg(ctx, view, stars, t);
+          const sc = Math.min(view.w, view.h) / 13, cx = view.w * 0.5, cy = view.h * 0.5;
+          const prog = (t * 0.35) % 1.4;
+          // 降着円盤（見た目のため）
+          ctx.save(); ctx.translate(cx, cy); ctx.scale(1, 0.25);
+          const dg = ctx.createRadialGradient(0, 0, sc * 1.6, 0, 0, sc * 5);
+          dg.addColorStop(0, "rgba(255,190,90,0.0)"); dg.addColorStop(0.1, "rgba(255,190,90,0.55)"); dg.addColorStop(1, "rgba(255,90,40,0)");
+          ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(0, 0, sc * 5, 0, TAU); ctx.fill();
+          ctx.restore();
+          for (const ry of rays) {
+            const n = Math.floor(ry.pts.length * clamp(prog, 0, 1));
+            ctx.strokeStyle = ry.captured ? "rgba(255,95,110,0.85)" : "rgba(255,230,150,0.75)";
+            ctx.lineWidth = 1.2; ctx.beginPath();
+            for (let i = 0; i < n; i += 3) { const [x, y] = ry.pts[i]; const X = cx + x * sc, Y = cy - y * sc; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }
+            ctx.stroke();
+            // 下半分（対称）
+            ctx.beginPath();
+            for (let i = 0; i < n; i += 3) { const [x, y] = ry.pts[i]; const X = cx + x * sc, Y = cy + y * sc; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }
+            ctx.stroke();
+          }
+          // 光子球・地平線
+          ctx.setLineDash([4, 4]); ctx.strokeStyle = "rgba(255,211,79,0.7)"; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(cx, cy, 1.5 * sc, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+          glow(ctx, cx, cy, sc * 1.3, "rgba(255,150,80,0.25)");
+          dot(ctx, cx, cy, sc, "#000");
+          ctx.strokeStyle = "rgba(255,140,90,0.8)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, sc, 0, TAU); ctx.stroke();
+          // 観測者
+          const ox = cx + P.r * sc * 0.707, oy = cy - P.r * sc * 0.707;
+          dot(ctx, ox, oy, 4, COL.cyan); label(ctx, "観測者", ox + 8, oy - 6, { size: 11, color: COL.cyan });
+          label(ctx, "事象の地平線 r = r_s", cx, cy + sc + 16, { align: "center", size: 11, color: "#ffb090" });
+          label(ctx, "光子球 1.5 r_s", cx - 1.5 * sc - 6, cy - 1.5 * sc * 0.5, { size: 11, color: COL.yel, align: "right" });
+          label(ctx, "黄：通り過ぎる光　赤：吸い込まれる光（b < 2.6 r_s）", 14, 22, { size: 12, weight: 700 });
+          void bc;
+        },
+        readouts() {
+          const M = P.M, rs = 2953 * M; // m
+          const td = Math.sqrt(1 - 1 / P.r);
+          const tidal = (2 * 6.674e-11 * M * 1.989e30 * 1.8) / Math.pow(P.r * rs, 3);
+          return [
+            ["シュヴァルツシルト半径 r_s", rs < 1e5 ? `${sci(rs / 1000)} km` : `${sci(rs / 1.496e11)} AU`],
+            ["観測者の時計の進み（遠方比）", `${(td * 100).toFixed(2)} %`],
+            ["観測者の1時間は遠方で", `${sci(1 / td)} 時間`],
+            ["身長1.8 mの人にかかる潮汐加速度", `${sci(tidal / 9.81)} g`],
+            ["地平線での潮汐加速度", `${sci((2 * 6.674e-11 * M * 1.989e30 * 1.8) / Math.pow(rs, 3) / 9.81)} g`],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 20. ソーラーセイル                                                     */
+  /* ================================================================== */
+  ANIMS.solarsail = {
+    controls: [
+      { type: "range", id: "sigma", label: "面密度 σ（帆＋探査機）", min: 1, max: 100, step: 1, value: 10, unit: "g/m²" },
+      { type: "range", id: "alpha", label: "帆の傾き α（＋で外向き、−で内向き）", min: -70, max: 70, step: 1, value: 35, unit: "°" },
+    ],
+    create(ctx, view, P) {
+      const stars = makeStars(120);
+      let t = 0, st;
+      const GM = 4 * Math.PI * Math.PI; // AU³/年²
+      const reset = () => { st = { x: 1, y: 0, vx: 0, vy: 2 * Math.PI, trail: [], yrs: 0 }; };
+      reset();
+      const beta = () => (2 * 1361 / 2.998e8 / (P.sigma / 1000)) / 5.93e-3;
+      return {
+        update(dt) {
+          t += dt;
+          const steps = 40, h = (dt * 0.6) / steps;
+          for (let i = 0; i < steps; i++) {
+            const r = Math.hypot(st.x, st.y), rx = st.x / r, ry = st.y / r;
+            const tx = -ry, ty = rx; // 進行方向（反時計回り）
+            const a = (P.alpha * Math.PI) / 180;
+            const nx = rx * Math.cos(a) + tx * Math.sin(a), ny = ry * Math.cos(a) + ty * Math.sin(a);
+            const g = GM / (r * r), f = beta() * g * Math.cos(a) ** 2;
+            st.vx += (-g * rx + f * nx) * h; st.vy += (-g * ry + f * ny) * h;
+            st.x += st.vx * h; st.y += st.vy * h; st.yrs += h;
+          }
+          st.trail.push([st.x, st.y]); if (st.trail.length > 1500) st.trail.shift();
+          const r = Math.hypot(st.x, st.y);
+          if (r > 3.6 || r < 0.15 || st.yrs > 12) reset();
+        },
+        draw() {
+          drawBg(ctx, view, stars, t);
+          const cx = view.w / 2, cy = view.h / 2, sc = Math.min(view.w, view.h) / 7.6;
+          glow(ctx, cx, cy, 40, "rgba(255,220,120,0.9)"); dot(ctx, cx, cy, 9, "#fff3c0");
+          for (const [r, nm, c] of [[0.72, "金星", "#e8c870"], [1, "地球", "#4f9bff"], [1.52, "火星", "#ff6b3c"], [3.2, "小惑星帯（外縁）", "#8a8a8a"]]) {
+            ctx.strokeStyle = "rgba(160,180,220,0.18)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, r * sc, 0, TAU); ctx.stroke();
+            label(ctx, nm, cx + r * sc * 0.71 + 4, cy - r * sc * 0.71, { size: 10, color: c });
+          }
+          ctx.strokeStyle = "rgba(255,211,79,0.7)"; ctx.lineWidth = 1.5; ctx.beginPath();
+          st.trail.forEach(([x, y], i) => { const X = cx + x * sc, Y = cy - y * sc; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.stroke();
+          // 帆
+          const X = cx + st.x * sc, Y = cy - st.y * sc;
+          const r = Math.hypot(st.x, st.y), ang = Math.atan2(-st.y, st.x) + (-(P.alpha * Math.PI) / 180);
+          ctx.save(); ctx.translate(X, Y); ctx.rotate(ang);
+          ctx.strokeStyle = "#e6f0ff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(0, 11); ctx.stroke();
+          ctx.restore();
+          // 太陽光
+          ctx.strokeStyle = "rgba(255,230,150,0.35)"; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(X, Y); ctx.stroke(); ctx.setLineDash([]);
+          label(ctx, `経過 ${st.yrs.toFixed(1)} 年　太陽からの距離 ${r.toFixed(2)} AU`, 14, 22, { size: 13, weight: 700 });
+        },
+        readouts() {
+          const ac = 2 * 1361 / 2.998e8 / (P.sigma / 1000);
+          return [
+            ["特性加速度 a_c（1 AU）", `${(ac * 1000).toFixed(3)} mm/s²`],
+            ["軽さの係数 β", beta().toFixed(3)],
+            ["1年間加速し続けたときの速度変化", `${sci(ac * 3.156e7 / 1000)} km/s`],
+            ["1 m²あたりの力（1 AU, α=0）", "約 9.1 μN"],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 21. 光学迷彩：変換光学によるクローク                                   */
+  /* ================================================================== */
+  ANIMS.cloak = {
+    controls: [
+      { type: "select", id: "on", label: "マント", value: "on", options: [["on", "オン（光を迂回させる）"], ["off", "オフ"]] },
+      { type: "range", id: "rays", label: "光線の本数", min: 8, max: 40, step: 1, value: 22 },
+    ],
+    create(ctx, view, P) {
+      let t = 0;
+      return {
+        update(dt) { t += dt; },
+        draw() {
+          ctx.fillStyle = "#070b18"; ctx.fillRect(0, 0, view.w, view.h);
+          const cx = view.w * 0.5, cy = view.h * 0.5, R2 = Math.min(view.w, view.h) * 0.3, R1 = R2 * 0.45;
+          const on = P.on === "on";
+          if (on) {
+            const g = ctx.createRadialGradient(cx, cy, R1, cx, cy, R2);
+            g.addColorStop(0, "rgba(79,227,255,0.18)"); g.addColorStop(1, "rgba(79,227,255,0.03)");
+            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R2, 0, TAU); ctx.arc(cx, cy, R1, 0, TAU, true); ctx.fill();
+            ctx.strokeStyle = "rgba(79,227,255,0.5)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, R2, 0, TAU); ctx.stroke();
+          }
+          // 物体（人）
+          ctx.fillStyle = "#ff9a3c";
+          ctx.beginPath(); ctx.arc(cx, cy - R1 * 0.45, R1 * 0.22, 0, TAU); ctx.fill();
+          ctx.fillRect(cx - R1 * 0.22, cy - R1 * 0.2, R1 * 0.44, R1 * 0.75);
+          const n = P.rays, phase = (t * 120) % 40;
+          for (let i = 0; i < n; i++) {
+            const y0 = (i + 0.5) / n * view.h - cy;
+            ctx.strokeStyle = `hsla(${50 + (i / n) * 20},100%,70%,0.85)`; ctx.lineWidth = 1.3;
+            ctx.beginPath();
+            let blocked = false, started = false;
+            for (let x = -cx; x <= view.w - cx; x += 3) {
+              let px = x, py = y0;
+              const r = Math.hypot(px, py);
+              if (on && r < R2) { const rr = R1 + r * (R2 - R1) / R2; px = (px / r) * rr; py = (py / r) * rr; }
+              if (!on && Math.abs(py) < R1 * 0.6 && px > -R1 * 0.25 && px < R1 * 0.25) { blocked = true; }
+              if (blocked) break;
+              const X = cx + px, Y = cy + py;
+              started ? ctx.lineTo(X, Y) : (ctx.moveTo(X, Y), (started = true));
+            }
+            ctx.stroke();
+            if (!on && blocked) { ctx.fillStyle = "rgba(0,0,0,0.0)"; }
+          }
+          // 影
+          if (!on) {
+            ctx.fillStyle = "rgba(0,0,0,0.55)";
+            ctx.fillRect(cx + R1 * 0.25, cy - R1 * 0.6, view.w, R1 * 1.2);
+            label(ctx, "影", cx + R2 * 1.6, cy + 4, { size: 13, weight: 700, color: COL.dim });
+          }
+          // 波面の点（進行）
+          void phase;
+          // 観測者
+          dot(ctx, view.w - 26, cy, 6, COL.cyan);
+          label(ctx, "観測者", view.w - 26, cy + 22, { size: 11, align: "center", color: COL.cyan });
+          label(ctx, on ? "光は物体を避けて回り込み、出口でまっすぐに戻る → 物体も影も見えない" : "光が物体に当たり、うしろに影ができる → 物体が見える", 14, 22, { size: 12, weight: 700 });
+        },
+        readouts() {
+          return [
+            ["状態", P.on === "on" ? "クローク作動中" : "通常"],
+            ["必要な材料", "誘電率・透磁率が位置と方向で変わるメタマテリアル"],
+            ["内側の境界での条件", "ε_r, μ_r → 0（光が“止まる”方向）"],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 22. 電脳化：ポピュレーション・ベクトルによるカーソル操作                 */
+  /* ================================================================== */
+  ANIMS.cyberbrain = {
+    controls: [
+      { type: "range", id: "N", label: "記録する神経細胞の数 N", min: 4, max: 256, step: 1, value: 64 },
+      { type: "range", id: "noise", label: "発火のばらつき（ノイズ）", min: 0, max: 2, step: 0.05, value: 0.8 },
+    ],
+    create(ctx, view, P) {
+      let t = 0, cur = [0, 0], target = [0.6, 0.3], err = 0, nErr = 0;
+      const pref = Array.from({ length: 256 }, () => rand(0, TAU));
+      const rates = new Float32Array(256);
+      let lastDir = 0;
+      return {
+        update(dt) {
+          t += dt;
+          if (Math.hypot(target[0] - cur[0], target[1] - cur[1]) < 0.05) { const a = rand(0, TAU), r = rand(0.3, 0.8); target = [Math.cos(a) * r, Math.sin(a) * r]; }
+          const want = Math.atan2(target[1] - cur[1], target[0] - cur[0]);
+          let px = 0, py = 0;
+          for (let i = 0; i < P.N; i++) {
+            const f = Math.cos(want - pref[i]) + P.noise * (Math.random() + Math.random() + Math.random() - 1.5) * 1.4;
+            rates[i] = f;
+            px += f * Math.cos(pref[i]); py += f * Math.sin(pref[i]);
+          }
+          const dir = Math.atan2(py, px);
+          lastDir = dir;
+          const e = Math.abs(((dir - want + 3 * Math.PI) % TAU) - Math.PI);
+          err = err * 0.98 + e * 0.02; nErr++;
+          cur[0] += Math.cos(dir) * 0.35 * dt; cur[1] += Math.sin(dir) * 0.35 * dt;
+          cur[0] = clamp(cur[0], -1, 1); cur[1] = clamp(cur[1], -1, 1);
+        },
+        draw() {
+          ctx.fillStyle = "#070b18"; ctx.fillRect(0, 0, view.w, view.h);
+          // 神経細胞（左）
+          const cols = 16, gw = Math.min(view.w * 0.42, view.h * 0.8), cell = gw / cols, gx = 20, gy = (view.h - cell * 16) / 2 + 10;
+          label(ctx, `運動野の神経細胞（${P.N}個を記録）`, gx, gy - 10, { size: 11, color: COL.dim });
+          for (let i = 0; i < 256; i++) {
+            const x = gx + (i % cols) * cell + cell / 2, y = gy + Math.floor(i / cols) * cell + cell / 2;
+            if (i >= P.N) { dot(ctx, x, y, cell * 0.18, "rgba(120,140,180,0.15)"); continue; }
+            const f = clamp(rates[i], -1, 2.5);
+            const k = clamp((f + 1) / 3, 0, 1);
+            dot(ctx, x, y, cell * 0.32, `rgba(${lerp(40, 255, k)},${lerp(60, 220, k)},${lerp(120, 90, k)},1)`);
+            if (k > 0.75 && Math.random() < 0.4) glow(ctx, x, y, cell * 0.8, "rgba(255,220,120,0.8)", 0.6);
+          }
+          // 画面（右）
+          const sx = view.w * 0.55, sw = view.w * 0.4, sh = Math.min(sw, view.h * 0.75), sy = (view.h - sh) / 2;
+          ctx.strokeStyle = "rgba(160,190,255,0.4)"; ctx.lineWidth = 1.5; ctx.strokeRect(sx, sy, sw, sh);
+          const X = (v) => sx + sw / 2 + v * sw * 0.45, Y = (v) => sy + sh / 2 - v * sh * 0.45;
+          ctx.strokeStyle = COL.grn; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(target[0]), Y(target[1]), 12, 0, TAU); ctx.stroke();
+          dot(ctx, X(cur[0]), Y(cur[1]), 6, COL.yel);
+          arrow(ctx, X(cur[0]), Y(cur[1]), X(cur[0]) + Math.cos(lastDir) * 26, Y(cur[1]) - Math.sin(lastDir) * 26, "rgba(255,211,79,0.8)", 1.5, 6);
+          label(ctx, "カーソル（脳の信号から推定）", sx, sy - 10, { size: 11, color: COL.dim });
+          label(ctx, "○ 目標", sx + sw, sy - 10, { size: 11, color: COL.grn, align: "right" });
+        },
+        readouts() {
+          return [
+            ["記録している細胞の数", `${P.N}`],
+            ["推定した方向の平均誤差", `${((err * 180) / Math.PI).toFixed(1)}°`],
+            ["誤差の目安（∝ 1/√N）", `${(1 / Math.sqrt(P.N)).toFixed(3)}`],
+            ["ヒトの脳の神経細胞の数", "約860億個"],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 23. 転送装置：量子テレポーテーションの回路                              */
+  /* ================================================================== */
+  ANIMS.teleport = {
+    controls: [
+      { type: "range", id: "theta", label: "送る状態の角度 θ", min: 0, max: 180, step: 1, value: 60, unit: "°" },
+      { type: "range", id: "phi", label: "送る状態の位相 φ", min: 0, max: 360, step: 1, value: 45, unit: "°" },
+    ],
+    create(ctx, view, P) {
+      let t = 0, m = [0, 0], cycle = -1;
+      const T = 9;
+      function bloch(x, y, R, th, ph, col, faded) {
+        ctx.strokeStyle = `rgba(160,190,255,${faded ? 0.15 : 0.45})`; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(x, y, R, R * 0.3, 0, 0, TAU); ctx.stroke();
+        if (faded) return;
+        const vx = Math.sin(th) * Math.cos(ph), vy = Math.sin(th) * Math.sin(ph), vz = Math.cos(th);
+        arrow(ctx, x, y, x + (vx * 0.9 - vy * 0.0) * R, y - (vz * 0.9 - vy * 0.3) * R, col, 2.5, 7);
+        label(ctx, "|0⟩", x, y - R - 4, { align: "center", size: 10, color: COL.dim });
+        label(ctx, "|1⟩", x, y + R + 12, { align: "center", size: 10, color: COL.dim });
+      }
+      return {
+        update(dt) {
+          t += dt;
+          const c = Math.floor(t / T);
+          if (c !== cycle) { cycle = c; m = [Math.random() < 0.5 ? 0 : 1, Math.random() < 0.5 ? 0 : 1]; }
+        },
+        draw() {
+          ctx.fillStyle = "#070b18"; ctx.fillRect(0, 0, view.w, view.h);
+          const s = t % T, step = s < 1.5 ? 0 : s < 3.5 ? 1 : s < 5.5 ? 2 : s < 7.5 ? 3 : 4;
+          const th = (P.theta * Math.PI) / 180, ph = (P.phi * Math.PI) / 180;
+          const x0 = 90, x1 = view.w - 120, ys = [view.h * 0.25, view.h * 0.45, view.h * 0.72];
+          const names = ["粒子1（送る状態）", "粒子2（アリス）", "粒子3（ボブ）"];
+          ys.forEach((y, i) => {
+            ctx.strokeStyle = "rgba(200,215,255,0.5)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+            label(ctx, names[i], 12, y - 10, { size: 11, color: COL.dim });
+          });
+          // アリス / ボブの領域
+          ctx.fillStyle = "rgba(255,95,168,0.06)"; ctx.fillRect(x0 - 10, ys[0] - 40, (x1 - x0) * 0.62, ys[1] - ys[0] + 70);
+          label(ctx, "アリス", x0, ys[0] - 46, { size: 12, weight: 700, color: COL.mag });
+          ctx.fillStyle = "rgba(79,227,255,0.06)"; ctx.fillRect(x0 - 10, ys[2] - 40, x1 - x0 + 20, 80);
+          label(ctx, "ボブ（遠く離れた場所）", x0, ys[2] + 52, { size: 12, weight: 700, color: COL.cyan });
+          const gx = (f) => x0 + (x1 - x0) * f;
+          // ① もつれ
+          ctx.strokeStyle = step >= 0 ? "rgba(255,95,168,0.8)" : "transparent"; ctx.setLineDash([4, 4]);
+          ctx.beginPath(); ctx.moveTo(gx(0.08), ys[1]); ctx.bezierCurveTo(gx(0.0), (ys[1] + ys[2]) / 2, gx(0.0), (ys[1] + ys[2]) / 2, gx(0.08), ys[2]); ctx.stroke(); ctx.setLineDash([]);
+          label(ctx, "① もつれたペア", gx(0.1), (ys[1] + ys[2]) / 2 + 4, { size: 11, color: step === 0 ? COL.yel : COL.dim });
+          // ② ベル測定
+          const box = (x, y, w, h, txt, on) => { ctx.fillStyle = on ? "rgba(255,211,79,0.25)" : "rgba(30,40,70,0.9)"; ctx.strokeStyle = on ? COL.yel : "rgba(160,190,255,0.5)"; ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); label(ctx, txt, x + w / 2, y + h / 2 + 4, { size: 11, align: "center", weight: 700 }); };
+          box(gx(0.3), ys[0] - 16, 70, ys[1] - ys[0] + 32, "ベル測定", step === 1);
+          label(ctx, "② 測定", gx(0.3) + 35, ys[0] - 24, { size: 11, align: "center", color: step === 1 ? COL.yel : COL.dim });
+          if (step >= 2) {
+            label(ctx, `結果 ${m[0]}${m[1]}`, gx(0.3) + 35, ys[1] + 34, { size: 13, weight: 800, align: "center", color: COL.yel });
+            // ③ 古典通信
+            const f = clamp((s - 3.5) / 2, 0, 1);
+            ctx.strokeStyle = "rgba(255,211,79,0.8)"; ctx.lineWidth = 2; ctx.setLineDash([2, 4]);
+            ctx.beginPath(); ctx.moveTo(gx(0.42), ys[1] + 20); ctx.lineTo(lerp(gx(0.42), gx(0.62), f), lerp(ys[1] + 20, ys[2] - 20, f)); ctx.stroke(); ctx.setLineDash([]);
+            label(ctx, "③ 2ビットを光速以下の通信で送る", gx(0.45), (ys[1] + ys[2]) / 2 + 6, { size: 11, color: step === 2 ? COL.yel : COL.dim });
+          }
+          const gate = ["なし", "X", "Z", "ZX"][m[0] * 2 + m[1]];
+          box(gx(0.64), ys[2] - 18, 70, 36, step >= 3 ? `補正 ${gate}` : "補正", step === 3);
+          label(ctx, "④ 操作", gx(0.64) + 35, ys[2] - 26, { size: 11, align: "center", color: step === 3 ? COL.yel : COL.dim });
+          // ブロッホ球
+          const R = Math.min(34, view.h * 0.08);
+          bloch(gx(0.15), ys[0], R, th, ph, COL.yel, step >= 2);
+          if (step >= 2) label(ctx, "状態は壊れる", gx(0.15), ys[0] + R + 26, { size: 10, align: "center", color: COL.red });
+          // ボブの粒子：補正前はランダム、補正後は元の状態
+          if (step >= 4) bloch(gx(0.9), ys[2], R, th, ph, COL.grn, false);
+          else bloch(gx(0.9), ys[2], R, th + (m[1] ? Math.PI : 0) * (step >= 2 ? 1 : 0), ph + (m[0] ? Math.PI : 0), "rgba(160,190,255,0.6)", step < 2);
+          if (step >= 4) label(ctx, "元の状態が再現された！", gx(0.9), ys[2] + R + 26, { size: 11, align: "center", weight: 800, color: COL.grn });
+        },
+        readouts() {
+          const th = (P.theta * Math.PI) / 180;
+          return [
+            ["送る状態", `cos(θ/2)|0⟩ + e^{iφ} sin(θ/2)|1⟩`],
+            ["|0⟩が出る確率", `${(Math.cos(th / 2) ** 2 * 100).toFixed(1)} %`],
+            ["今回のベル測定の結果", `${m[0]}${m[1]}`],
+            ["ボブが行う補正", ["何もしない", "X（ビット反転）", "Z（位相反転）", "Z・X の両方"][m[0] * 2 + m[1]]],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 24. ビーム兵器：ガウスビームの広がり                                     */
+  /* ================================================================== */
+  ANIMS.beam = {
+    controls: [
+      { type: "range", id: "lambda", label: "波長 λ", min: 0.4, max: 10.6, step: 0.1, value: 1.06, unit: "μm" },
+      { type: "range", id: "D", label: "口径 D", min: 0.05, max: 1.5, step: 0.01, value: 0.5, unit: "m" },
+      { type: "range", id: "L", label: "目標までの距離", min: 2, max: 5, step: 0.05, value: 4, log: true, unit: "m" },
+      { type: "range", id: "Pw", label: "出力", min: 1, max: 6, step: 0.1, value: 4.5, log: true, unit: "W" },
+    ],
+    create(ctx, view, P) {
+      const stars = makeStars(60);
+      let t = 0, heat = 0;
+      const spot = () => { const w0 = P.D / 2, lam = P.lambda * 1e-6, zR = (Math.PI * w0 * w0) / lam; return w0 * (P.L / zR); };
+      return {
+        update(dt) {
+          t += dt;
+          const I = P.Pw / (Math.PI * spot() ** 2);
+          heat = Math.min(1, heat + dt * Math.min(2, I / 2e6));
+          if (t % 4 < dt) heat = 0;
+        },
+        draw() {
+          drawBg(ctx, view, stars, t);
+          const x0 = 60, x1 = view.w - 80, cy = view.h * 0.5;
+          const w0 = P.D / 2, lam = P.lambda * 1e-6, zR = (Math.PI * w0 * w0) / lam;
+          const wz = (z) => w0 * Math.sqrt((1 - z / P.L) ** 2 + (z / zR) ** 2); // 目標に焦点を合わせたガウスビーム
+          const wmax = Math.max(w0, wz(P.L));
+          const ys = (view.h * 0.32) / wmax;
+          // ビームの包絡線
+          ctx.beginPath();
+          for (let i = 0; i <= 100; i++) { const z = (P.L * i) / 100; ctx.lineTo(lerp(x0, x1, i / 100), cy - wz(z) * ys); }
+          for (let i = 100; i >= 0; i--) { const z = (P.L * i) / 100; ctx.lineTo(lerp(x0, x1, i / 100), cy + wz(z) * ys); }
+          ctx.closePath();
+          const col = P.lambda < 0.7 ? "rgba(90,255,140," : P.lambda < 2 ? "rgba(255,90,90," : "rgba(255,160,60,";
+          const g = ctx.createLinearGradient(x0, 0, x1, 0);
+          g.addColorStop(0, col + "0.85)"); g.addColorStop(1, col + `${clamp(0.85 * (w0 / wz(P.L)) ** 2 + 0.08, 0.08, 0.85)})`);
+          ctx.fillStyle = g; ctx.fill();
+          // 発射装置
+          ctx.fillStyle = "#3a4a66"; ctx.fillRect(x0 - 40, cy - w0 * ys - 8, 40, 2 * w0 * ys + 16);
+          label(ctx, `口径 ${P.D.toFixed(2)} m`, x0 - 20, cy + w0 * ys + 26, { size: 11, align: "center" });
+          // 目標
+          ctx.fillStyle = "#8a96aa"; ctx.fillRect(x1, cy - 60, 14, 120);
+          glow(ctx, x1, cy, Math.max(8, wz(P.L) * ys) + 10, `rgba(255,${lerp(220, 120, heat)},80,1)`, 0.4 + 0.6 * heat);
+          label(ctx, "目標", x1 + 7, cy - 68, { size: 11, align: "center" });
+          label(ctx, `距離 ${sci(P.L / 1000)} km　ビーム直径 ${sci(2 * wz(P.L) * 100)} cm`, 14, 22, { size: 13, weight: 700 });
+          label(ctx, "（縦方向は大きく拡大して表示）", 14, 40, { size: 11, color: COL.dim });
+        },
+        readouts() {
+          const w = spot(), A = Math.PI * w * w, I = P.Pw / A;
+          const tBurn = 8300 / (P.Pw * Math.min(1, (0.01 * 0.01) / (w * w)));
+          return [
+            ["目標上のビーム直径", `${sci(2 * w * 100)} cm`],
+            ["目標上の強度（理想）", `${sci(I / 1e4)} W/cm²`],
+            ["太陽光（0.136 W/cm²）の", `${sci(I / 1361)} 倍`],
+            ["厚さ1 cmのアルミ（直径2 cm）を融かす時間の目安", `${sci(tBurn)} 秒`],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 25. 世代宇宙船                                                         */
+  /* ================================================================== */
+  ANIMS.generationship = {
+    controls: [
+      { type: "range", id: "v", label: "船の速さ（光速の何%か）", min: -1, max: 1, step: 0.05, value: 0, log: true, unit: "%" },
+      { type: "range", id: "N0", label: "出発時の乗員数", min: 20, max: 1000, step: 10, value: 160, unit: "人" },
+    ],
+    create(ctx, view, P) {
+      const stars = makeStars(140);
+      let t = 0, sim;
+      const reset = () => { sim = { gen: 0, pop: [P.N0], H: [1], N0: P.N0 }; };
+      reset();
+      const totalGen = () => Math.ceil((4.24 / (P.v / 100)) / 28);
+      return {
+        update(dt) {
+          t += dt;
+          if (sim.N0 !== P.N0) reset();
+          const G = totalGen();
+          const rate = Math.max(1, G / 6);
+          sim.acc = (sim.acc || 0) + dt * rate;
+          while (sim.acc >= 1 && sim.gen < G) {
+            sim.acc -= 1;
+            const n = sim.pop[sim.pop.length - 1];
+            // 目標人数を中心にランダムに変動（出生と死亡）
+            const target = P.N0;
+            let next = Math.round(n + (target - n) * 0.3 + (Math.random() - 0.5) * Math.sqrt(n) * 2.2);
+            next = Math.max(2, next);
+            sim.pop.push(next);
+            const H = sim.H[sim.H.length - 1] * (1 - 1 / (2 * next * 0.4));
+            sim.H.push(H);
+            sim.gen++;
+          }
+          if (sim.gen >= G) { sim.done = (sim.done || 0) + dt; if (sim.done > 3) reset(); }
+        },
+        draw() {
+          drawBg(ctx, view, stars, t);
+          const G = totalGen();
+          const f = Math.min(1, sim.gen / G);
+          const x0 = 60, x1 = view.w - 60, y = view.h * 0.22;
+          glow(ctx, x0, y, 26, "rgba(255,220,120,0.9)"); label(ctx, "太陽系", x0, y + 34, { align: "center", size: 11 });
+          glow(ctx, x1, y, 20, "rgba(255,120,80,0.9)"); label(ctx, "プロキシマ・ケンタウリ", x1, y + 34, { align: "center", size: 11 });
+          ctx.setLineDash([3, 6]); ctx.strokeStyle = "rgba(200,210,255,0.3)"; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.setLineDash([]);
+          const sx = lerp(x0, x1, f);
+          ctx.fillStyle = "#cfd8e8"; ctx.beginPath(); ctx.ellipse(sx, y, 16, 5, 0, 0, TAU); ctx.fill();
+          glow(ctx, sx - 18, y, 10, "rgba(120,200,255,0.9)");
+          label(ctx, `第${sim.gen}世代`, sx, y - 14, { align: "center", size: 12, weight: 800, color: COL.yel });
+          // 人口と多様性のグラフ
+          const gx = 50, gy = view.h * 0.42, gw = view.w - 100, gh = view.h * 0.46;
+          ctx.strokeStyle = "rgba(160,190,255,0.3)"; ctx.strokeRect(gx, gy, gw, gh);
+          const maxP = Math.max(...sim.pop, P.N0 * 1.5);
+          ctx.strokeStyle = COL.cyan; ctx.lineWidth = 2; ctx.beginPath();
+          sim.pop.forEach((p, i) => { const X = gx + (i / Math.max(1, G)) * gw, Y = gy + gh - (p / maxP) * gh; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.stroke();
+          ctx.strokeStyle = COL.mag; ctx.beginPath();
+          sim.H.forEach((h, i) => { const X = gx + (i / Math.max(1, G)) * gw, Y = gy + gh - h * gh; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.stroke();
+          label(ctx, "— 船内人口", gx + 8, gy + 16, { size: 11, color: COL.cyan });
+          label(ctx, "— 遺伝的多様性（ヘテロ接合度, 出発時=100%）", gx + 8, gy + 32, { size: 11, color: COL.mag });
+          label(ctx, `到着まで ${G} 世代`, gx + gw - 6, gy + gh - 8, { size: 11, align: "right", color: COL.dim });
+        },
+        readouts() {
+          const yrs = 4.24 / (P.v / 100);
+          const G = totalGen();
+          const Ne = P.N0 * 0.4;
+          return [
+            ["到着までの年数", `${sci(yrs)} 年`],
+            ["世代数（1世代28年）", `${G} 世代`],
+            ["有効集団サイズ N_e（乗員の約4割と仮定）", `${Ne.toFixed(0)} 人`],
+            ["到着時に残る遺伝的多様性（理論値）", `${(Math.pow(1 - 1 / (2 * Ne), G) * 100).toFixed(1)} %`],
+            ["必要な速度（km/s）", `${sci((P.v / 100) * 299792)} km/s`],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 26. 技術的特異点：自己改良モデル                                        */
+  /* ================================================================== */
+  ANIMS.singularity = {
+    controls: [
+      { type: "range", id: "p", label: "自己改良の効き方 p", min: 0.5, max: 1.5, step: 0.01, value: 1.15 },
+      { type: "range", id: "k", label: "改良の速さ k", min: 0.05, max: 0.5, step: 0.01, value: 0.15 },
+    ],
+    create(ctx, view, P) {
+      let t = 0;
+      const I0 = 1;
+      const I = (tt) => {
+        const p = P.p, k = P.k;
+        if (Math.abs(p - 1) < 1e-3) return I0 * Math.exp(k * tt);
+        const base = Math.pow(I0, 1 - p) - (p - 1) * k * tt;
+        if (base <= 0) return Infinity;
+        return Math.pow(base, -1 / (p - 1));
+      };
+      const tstar = () => (P.p > 1.001 ? Math.pow(I0, 1 - P.p) / ((P.p - 1) * P.k) : Infinity);
+      return {
+        update(dt) { t += dt; },
+        draw() {
+          ctx.fillStyle = "#070b18"; ctx.fillRect(0, 0, view.w, view.h);
+          const gx = 60, gy = 40, gw = view.w - 100, gh = view.h - 90, Tmax = 60;
+          const X = (tt) => gx + (tt / Tmax) * gw, Y = (v) => gy + gh - (Math.log10(Math.max(1, v)) / 12) * gh;
+          ctx.strokeStyle = "rgba(160,190,255,0.3)"; ctx.lineWidth = 1; ctx.strokeRect(gx, gy, gw, gh);
+          for (let e = 0; e <= 12; e += 3) { label(ctx, `10${["⁰", "", "", "³", "", "", "⁶", "", "", "⁹", "", "", "¹²"][e]}`, gx - 6, Y(10 ** e) + 4, { size: 10, align: "right", color: COL.dim }); ctx.strokeStyle = "rgba(160,190,255,0.08)"; ctx.beginPath(); ctx.moveTo(gx, Y(10 ** e)); ctx.lineTo(gx + gw, Y(10 ** e)); ctx.stroke(); }
+          // 比較：人間の知能（一定）
+          ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(gx, Y(3)); ctx.lineTo(gx + gw, Y(3)); ctx.stroke(); ctx.setLineDash([]);
+          label(ctx, "人間の水準（仮）", gx + gw - 4, Y(3) - 6, { size: 10, align: "right", color: COL.dim });
+          const prog = Math.min(Tmax, (t * 8) % (Tmax + 16));
+          // 参考曲線
+          const ref = (pp, col) => { ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath(); for (let tt = 0; tt <= Tmax; tt += 0.25) { let v; if (pp === 1) v = Math.exp(P.k * tt); else { const b = 1 - (pp - 1) * P.k * tt; v = b <= 0 ? 1e13 : Math.pow(b, -1 / (pp - 1)); } ctx.lineTo(X(tt), Y(Math.min(v, 1e13))); } ctx.stroke(); };
+          ref(1, "rgba(109,255,156,0.3)");
+          ctx.strokeStyle = COL.yel; ctx.lineWidth = 2.5; ctx.beginPath();
+          let blew = false;
+          for (let tt = 0; tt <= prog; tt += 0.1) { const v = I(tt); if (!isFinite(v) || v > 1e12) { blew = true; ctx.lineTo(X(tt), gy); break; } tt ? ctx.lineTo(X(tt), Y(v)) : ctx.moveTo(X(tt), Y(v)); }
+          ctx.stroke();
+          const ts = tstar();
+          if (isFinite(ts) && ts < Tmax) {
+            ctx.strokeStyle = COL.red; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(X(ts), gy); ctx.lineTo(X(ts), gy + gh); ctx.stroke(); ctx.setLineDash([]);
+            label(ctx, `特異点 t* = ${ts.toFixed(1)}`, X(ts) + 4, gy + 16, { size: 12, weight: 800, color: COL.red });
+            if (blew) glow(ctx, X(ts), gy + 8, 30, "rgba(255,95,95,0.8)", 0.5 + 0.3 * Math.sin(t * 8));
+          }
+          label(ctx, "時間 →", gx + gw, gy + gh + 18, { size: 11, align: "right", color: COL.dim });
+          label(ctx, "知能 I（対数目盛）", gx, gy - 12, { size: 11, color: COL.dim });
+          label(ctx, "— 緑：p = 1（指数関数的成長）", gx + 8, gy + gh - 10, { size: 11, color: "rgba(109,255,156,0.8)" });
+        },
+        readouts() {
+          const ts = tstar();
+          return [
+            ["成長のタイプ", P.p < 0.995 ? "減速する成長（p < 1）" : P.p <= 1.005 ? "指数関数的成長（p = 1）" : "有限時間で発散（p > 1）"],
+            ["特異点の時刻 t*", isFinite(ts) ? ts.toFixed(2) : "なし"],
+            ["I が2倍になる時間（初期）", `${(Math.LN2 / P.k).toFixed(2)}`],
+            ["1ビット消去の最小エネルギー（300 K）", "2.9×10⁻²¹ J"],
+          ];
+        },
+      };
+    },
+  };
+
+
+  /* ================================================================== */
+  /* 27. ナノマシン：自己複製とブラウン運動                                   */
+  /* ================================================================== */
+  ANIMS.nanomachine = {
+    controls: [
+      { type: "range", id: "tau", label: "1回の複製にかかる時間 τ", min: 1, max: 4, step: 0.05, value: 2, log: true, unit: "秒" },
+      { type: "range", id: "mass", label: "ナノマシン1台の質量", min: -18, max: -12, step: 0.5, value: -15, log: true, unit: "kg" },
+    ],
+    create(ctx, view, P) {
+      let t = 0, bots = [], gen = 0, genT = 0, mols = [];
+      const reset = () => { bots = [{ x: 0.5, y: 0.5 }]; gen = 0; genT = 0; };
+      reset();
+      for (let i = 0; i < 160; i++) mols.push({ x: Math.random(), y: Math.random(), vx: rand(-1, 1), vy: rand(-1, 1) });
+      return {
+        update(dt) {
+          t += dt; genT += dt;
+          for (const m of mols) { m.x = (m.x + m.vx * dt * 0.25 + 1) % 1; m.y = (m.y + m.vy * dt * 0.25 + 1) % 1; }
+          for (const b of bots) { b.x = clamp(b.x + rand(-1, 1) * 0.006, 0.02, 0.98); b.y = clamp(b.y + rand(-1, 1) * 0.006, 0.04, 0.96); }
+          if (genT > 1.1) {
+            genT = 0; gen++;
+            if (bots.length < 512) bots = bots.concat(bots.map((b) => ({ x: clamp(b.x + rand(-0.04, 0.04), 0.02, 0.98), y: clamp(b.y + rand(-0.04, 0.04), 0.04, 0.96) })));
+            if (gen > 14) reset();
+          }
+        },
+        draw() {
+          ctx.fillStyle = "#06101a"; ctx.fillRect(0, 0, view.w, view.h);
+          const W = view.w * 0.55, H = view.h;
+          for (const m of mols) dot(ctx, m.x * W, m.y * H, 1.3, "rgba(120,170,255,0.35)");
+          for (const b of bots) { glow(ctx, b.x * W, b.y * H, 7, "rgba(109,255,156,0.6)", 0.5); dot(ctx, b.x * W, b.y * H, 2.2, "#c8ffd8"); }
+          label(ctx, `世代 ${gen}：${sci(2 ** gen)} 台`, 14, 22, { size: 14, weight: 800, color: COL.grn });
+          label(ctx, "小さな青い点 = 水分子（熱運動で絶えずぶつかってくる）", 14, H - 12, { size: 11, color: COL.dim });
+          // 対数グラフ
+          const gx = view.w * 0.6, gw = view.w * 0.36, gy = 40, gh = view.h - 90;
+          ctx.strokeStyle = "rgba(160,190,255,0.3)"; ctx.strokeRect(gx, gy, gw, gh);
+          const need = Math.log2(1e15 / P.mass), needE = Math.log2(6e24 / P.mass), maxG = needE * 1.05;
+          const X = (g) => gx + (g / maxG) * gw, Y = (lg) => gy + gh - (lg / (needE * 1.05)) * gh;
+          ctx.strokeStyle = COL.grn; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(maxG), Y(maxG)); ctx.stroke();
+          for (const [g, nm, c] of [[need, "地球の全生物量（約10¹⁵ kg）", COL.org], [needE, "地球の質量（6×10²⁴ kg）", COL.red]]) {
+            ctx.setLineDash([3, 4]); ctx.strokeStyle = c; ctx.beginPath(); ctx.moveTo(gx, Y(g)); ctx.lineTo(gx + gw, Y(g)); ctx.stroke(); ctx.setLineDash([]);
+            label(ctx, nm, gx + 4, Y(g) - 4, { size: 10, color: c });
+          }
+          dot(ctx, X(gen), Y(gen), 5, COL.yel);
+          label(ctx, "倍増の回数 →", gx + gw, gy + gh + 14, { size: 10, align: "right", color: COL.dim });
+          label(ctx, "log₂（台数）", gx, gy - 8, { size: 10, color: COL.dim });
+        },
+        readouts() {
+          const need = Math.log2(1e15 / P.mass), tt = need * P.tau;
+          const fmt = (s) => (s < 3600 ? `${sci(s / 60)} 分` : s < 86400 * 3 ? `${sci(s / 3600)} 時間` : `${sci(s / 86400)} 日`);
+          return [
+            ["地球の生物量に達するまでの倍増回数", `${need.toFixed(1)} 回`],
+            ["それにかかる時間（理想的な場合）", fmt(tt)],
+            ["地球の質量に達するまで", fmt(Math.log2(6e24 / P.mass) * P.tau)],
+            ["1 μmの物体のレイノルズ数（水中, 10 μm/s）", "約10⁻⁵"],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 28. 核融合：プラズマ中のD–T反応                                         */
+  /* ================================================================== */
+  ANIMS.fusion = {
+    controls: [
+      { type: "range", id: "T", label: "温度 T", min: 1, max: 50, step: 0.5, value: 15, unit: "keV" },
+      { type: "range", id: "n", label: "密度 n", min: 19, max: 21.5, step: 0.05, value: 20, log: true, unit: "/m³" },
+      { type: "range", id: "tau", label: "閉じ込め時間 τ_E", min: -1, max: 1.5, step: 0.05, value: 0.5, log: true, unit: "秒" },
+    ],
+    create(ctx, view, P) {
+      let t = 0, ions = [], prods = [], fusions = 0;
+      const N = 70;
+      for (let i = 0; i < N; i++) { const a = rand(0, TAU); ions.push({ x: Math.random(), y: Math.random(), vx: Math.cos(a), vy: Math.sin(a), k: i % 2 }); }
+      return {
+        update(dt) {
+          t += dt;
+          const sp = 0.12 * Math.sqrt(P.T / 10);
+          for (const p of ions) {
+            p.x += p.vx * sp * dt; p.y += p.vy * sp * dt;
+            // 磁場で閉じ込め（壁で反射）
+            if (p.x < 0.03) { p.x = 0.03; p.vx = Math.abs(p.vx); } else if (p.x > 0.97) { p.x = 0.97; p.vx = -Math.abs(p.vx); }
+            if (p.y < 0.06) { p.y = 0.06; p.vy = Math.abs(p.vy); } else if (p.y > 0.94) { p.y = 0.94; p.vy = -Math.abs(p.vy); }
+            if (Math.random() < dt * 0.5) { const a = rand(0, TAU); const e = -Math.log(Math.random() + 1e-9); p.vx = Math.cos(a) * e; p.vy = Math.sin(a) * e; }
+          }
+          // 衝突判定（D と T）
+          for (let i = 0; i < ions.length; i++) for (let j = i + 1; j < ions.length; j++) {
+            const a = ions[i], b = ions[j];
+            if (a.k === b.k) continue;
+            const dx = a.x - b.x, dy = a.y - b.y;
+            if (dx * dx + dy * dy < 0.0004) {
+              const E = P.T * (Math.hypot(a.vx - b.vx, a.vy - b.vy) ** 2) * 0.5;
+              const prob = Math.exp(-Math.sqrt(1200 / Math.max(E, 0.01)) * 0.35);
+              if (Math.random() < prob * 0.5) {
+                fusions++;
+                prods.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, a: rand(0, TAU), age: 0 });
+                const r = (p) => { p.x = rand(0.05, 0.95); p.y = rand(0.08, 0.92); };
+                r(a); r(b);
+              }
+            }
+          }
+          for (const p of prods) p.age += dt;
+          prods = prods.filter((p) => p.age < 1.2);
+        },
+        draw() {
+          ctx.fillStyle = "#0a0614"; ctx.fillRect(0, 0, view.w, view.h);
+          const W = view.w * 0.62, H = view.h;
+          const g = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, W * 0.6);
+          g.addColorStop(0, `rgba(255,${lerp(120, 200, clamp(P.T / 50, 0, 1))},220,0.25)`); g.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+          ctx.strokeStyle = "rgba(160,120,255,0.35)"; ctx.lineWidth = 2; ctx.strokeRect(W * 0.02, H * 0.05, W * 0.96, H * 0.9);
+          for (const p of ions) dot(ctx, p.x * W, p.y * H, 3.2, p.k ? "#ff8fa8" : "#8fc8ff");
+          for (const p of prods) {
+            const f = p.age / 1.2, x = p.x * W, y = p.y * H;
+            glow(ctx, x, y, 18 * (1 - f) + 4, "rgba(255,255,200,1)", 1 - f);
+            dot(ctx, x + Math.cos(p.a) * f * 30, y + Math.sin(p.a) * f * 30, 3.5, "#ffd34f");
+            dot(ctx, x - Math.cos(p.a) * f * 140, y - Math.sin(p.a) * f * 140, 2.2, "#ffffff");
+          }
+          [["D（重水素）", "#8fc8ff"], ["T（三重水素）", "#ff8fa8"], ["He", "#ffd34f"], ["中性子 n", "#ffffff"]].forEach(([nm, c], i) => { dot(ctx, 20 + i * 110, 18, 4, c); label(ctx, nm, 28 + i * 110, 22, { size: 11, color: c }); });
+          label(ctx, `核融合の回数：${fusions}`, 14, H - 12, { size: 12, weight: 700, color: COL.yel });
+          // ローソン条件のバー
+          const triple = P.n * P.T * P.tau, need = 3e21;
+          const bx = view.w * 0.68, bw = view.w * 0.28, by = 50;
+          label(ctx, "三重積 nTτ_E（対数目盛）", bx, by - 10, { size: 11, color: COL.dim });
+          ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.fillRect(bx, by, bw, 16);
+          const f = clamp((Math.log10(triple) - 18) / 6, 0, 1), fn = (Math.log10(need) - 18) / 6;
+          ctx.fillStyle = triple >= need ? COL.grn : COL.org; ctx.fillRect(bx, by, bw * f, 16);
+          ctx.strokeStyle = "#fff"; ctx.beginPath(); ctx.moveTo(bx + bw * fn, by - 4); ctx.lineTo(bx + bw * fn, by + 20); ctx.stroke();
+          label(ctx, "点火条件", bx + bw * fn, by + 34, { size: 10, align: "center" });
+          label(ctx, triple >= need ? "自己点火できる！" : "まだ足りない", bx, by + 60, { size: 15, weight: 800, color: triple >= need ? COL.grn : COL.org });
+        },
+        readouts() {
+          const triple = P.n * P.T * P.tau;
+          const T = P.T, sv = T >= 5 && T <= 30 ? 1.1e-24 * T * T : NaN;
+          const Pd = isFinite(sv) ? 0.25 * P.n * P.n * sv * 17.6e6 * 1.602e-19 : NaN;
+          return [
+            ["温度（ケルビン換算）", `${sci(T * 1.16e7)} K`],
+            ["三重積 nTτ_E", `${sci(triple)} keV·s/m³`],
+            ["点火条件（約3×10²¹）に対して", `${sci(triple / 3e21)} 倍`],
+            ["核融合の出力密度（目安）", isFinite(Pd) ? `${sci(Pd / 1e6)} MW/m³` : "近似式の範囲外（5〜30 keV）"],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 29. クローン：体細胞核移植                                              */
+  /* ================================================================== */
+  ANIMS.clone = {
+    controls: [
+      { type: "range", id: "p", label: "1回あたりの成功率 p", min: 0.1, max: 20, step: 0.1, value: 0.4, unit: "%" },
+      { type: "range", id: "n", label: "試行回数 n（再構築胚の数）", min: 10, max: 1000, step: 10, value: 277, unit: "個" },
+    ],
+    create(ctx, view, P) {
+      let t = 0;
+      const T = 10;
+      return {
+        update(dt) { t += dt; },
+        draw() {
+          ctx.fillStyle = "#0b0a16"; ctx.fillRect(0, 0, view.w, view.h);
+          const s = t % T;
+          const cx = view.w * 0.38, cy = view.h * 0.52, R = Math.min(view.w, view.h) * 0.22;
+          const step = s < 2 ? 0 : s < 4 ? 1 : s < 5.2 ? 2 : s < 8.5 ? 3 : 4;
+          const titles = ["① 卵子から核を取り除く", "② 体細胞の核を入れる", "③ 電気刺激で融合・活性化", "④ 細胞分裂（2→4→8細胞→胚盤胞）", "⑤ 代理母の子宮へ移植"];
+          label(ctx, titles[step], 14, 24, { size: 15, weight: 800, color: COL.yel });
+          if (step <= 2) {
+            // 卵子
+            const g = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, 5, cx, cy, R);
+            g.addColorStop(0, "#fff0f4"); g.addColorStop(1, "#e8a0b8");
+            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+            ctx.strokeStyle = "rgba(255,200,220,0.6)"; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(cx, cy, R + 6, 0, TAU); ctx.stroke();
+            // ピペット
+            const pip = step === 0 ? lerp(R * 1.6, R * 0.3, clamp(s / 1.2, 0, 1)) - (s > 1.2 ? (s - 1.2) * R * 1.5 : 0) : step === 1 ? lerp(R * 1.8, R * 0.2, clamp((s - 2) / 1.2, 0, 1)) - (s > 3.2 ? (s - 3.2) * R * 2 : 0) : R * 3;
+            ctx.fillStyle = "rgba(200,220,255,0.35)"; ctx.fillRect(cx + pip, cy - 6, view.w, 12);
+            // 核
+            if (step === 0) { const nx = s < 1.2 ? cx + R * 0.3 : cx + pip; dot(ctx, nx, cy, R * 0.18, "#7a3a8a"); label(ctx, "卵子の核", cx + R * 0.3, cy - R * 0.3, { size: 11, align: "center" }); }
+            if (step >= 1) { const nx = step === 1 && s < 3.2 ? cx + pip : cx; dot(ctx, nx, cy, R * 0.2, "#3a6aba"); label(ctx, "提供者の体細胞の核", cx, cy - R * 0.32, { size: 11, align: "center", color: "#a8c8ff" }); }
+            if (step === 2) { for (let i = 0; i < 6; i++) { const a = i + t * 6; ctx.strokeStyle = "rgba(255,240,120,0.9)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * R * 1.1, cy + Math.sin(a) * R * 1.1); ctx.lineTo(cx + Math.cos(a + 0.2) * R * 1.35, cy + Math.sin(a + 0.2) * R * 1.35); ctx.stroke(); } }
+          } else if (step === 3) {
+            const f = (s - 5.2) / 3.3, cells = f < 0.25 ? 2 : f < 0.5 ? 4 : f < 0.75 ? 8 : 32;
+            ctx.strokeStyle = "rgba(255,200,220,0.6)"; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(cx, cy, R + 6, 0, TAU); ctx.stroke();
+            for (let i = 0; i < cells; i++) {
+              const a = (i / cells) * TAU + (cells > 8 ? 0 : 0.4), rr = cells === 2 ? R * 0.45 : cells === 32 ? R * 0.75 : R * 0.5;
+              const cr = cells === 2 ? R * 0.5 : cells === 4 ? R * 0.42 : cells === 8 ? R * 0.32 : R * 0.18;
+              dot(ctx, cx + Math.cos(a) * rr * (cells === 32 ? 1 : 0.9), cy + Math.sin(a) * rr * (cells === 32 ? 1 : 0.9), cr, "#f0b8c8");
+              dot(ctx, cx + Math.cos(a) * rr * 0.9, cy + Math.sin(a) * rr * 0.9, cr * 0.3, "#3a6aba");
+            }
+            if (cells === 32) { dot(ctx, cx - R * 0.35, cy, R * 0.3, "#e8a0b8"); label(ctx, "胚盤胞", cx, cy + R + 26, { size: 12, align: "center" }); }
+            else label(ctx, `${cells} 細胞`, cx, cy + R + 26, { size: 12, align: "center" });
+          } else {
+            dot(ctx, cx, cy, R * 0.9, "rgba(255,160,180,0.25)");
+            dot(ctx, cx, cy, R * 0.25, "#f0b8c8");
+            label(ctx, "代理母（子宮）", cx, cy + R + 10, { size: 12, align: "center" });
+          }
+          // 成功確率のグラフ
+          const gx = view.w * 0.68, gw = view.w * 0.28, gy = 60, gh = view.h - 120;
+          ctx.strokeStyle = "rgba(160,190,255,0.3)"; ctx.strokeRect(gx, gy, gw, gh);
+          const p = P.p / 100, nmax = 1000;
+          ctx.strokeStyle = COL.cyan; ctx.lineWidth = 2; ctx.beginPath();
+          for (let k = 0; k <= nmax; k += 10) { const y = gy + gh - (1 - Math.pow(1 - p, k)) * gh; k ? ctx.lineTo(gx + (k / nmax) * gw, y) : ctx.moveTo(gx, y); }
+          ctx.stroke();
+          const yN = gy + gh - (1 - Math.pow(1 - p, P.n)) * gh;
+          dot(ctx, gx + (P.n / nmax) * gw, yN, 5, COL.yel);
+          label(ctx, "1頭以上生まれる確率", gx, gy - 8, { size: 11, color: COL.dim });
+          label(ctx, "試行回数 →", gx + gw, gy + gh + 14, { size: 10, align: "right", color: COL.dim });
+        },
+        readouts() {
+          const p = P.p / 100;
+          return [
+            ["1頭以上生まれる確率", `${((1 - Math.pow(1 - p, P.n)) * 100).toFixed(1)} %`],
+            ["生まれる数の期待値", `${(p * P.n).toFixed(1)} 頭`],
+            ["1頭生まれるまでの平均試行回数", `${sci(1 / p)} 回`],
+            ["参考：ドリー（1996）", "277個の再構築胚から1頭"],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 30. ホログラム：干渉縞の記録                                            */
+  /* ================================================================== */
+  ANIMS.hologram = {
+    controls: [
+      { type: "range", id: "lambda", label: "光の波長 λ（表示用に拡大）", min: 8, max: 30, step: 1, value: 16, unit: "px" },
+      { type: "range", id: "angle", label: "参照光の角度 θ", min: 0, max: 60, step: 1, value: 25, unit: "°" },
+      { type: "select", id: "mode", label: "表示", value: "record", options: [["record", "記録：物体光＋参照光 → 干渉縞"], ["object", "物体光だけ"], ["reference", "参照光だけ"]] },
+    ],
+    create(ctx, view, P) {
+      let t = 0;
+      const RES = 3;
+      let img = null, iw = 0, ih = 0;
+      return {
+        update(dt) { t += dt; },
+        draw() {
+          const W = Math.floor(view.w / RES), H = Math.floor(view.h / RES);
+          if (!img || iw !== W || ih !== H) { img = ctx.createImageData(W, H); iw = W; ih = H; }
+          const d = img.data, k = (TAU / P.lambda) * RES, th = (P.angle * Math.PI) / 180;
+          const ox = W * 0.12, oy = H * 0.5, ph = t * 4;
+          const plateX = W * 0.78;
+          for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+            const r = Math.hypot(x - ox, y - oy) + 1;
+            const o = Math.cos(k * r - ph) * Math.min(1, 18 / Math.sqrt(r));
+            const rf = Math.cos(k * (x * Math.cos(th) + y * Math.sin(th)) - ph);
+            let v;
+            if (P.mode === "object") v = 0.5 + 0.5 * o;
+            else if (P.mode === "reference") v = 0.5 + 0.5 * rf;
+            else {
+              // 時間平均の強度 |R+O|² ≈ 1 + a² + 2a cos(Δφ)
+              const a = Math.min(1, 18 / Math.sqrt(r));
+              const dphi = k * r - k * (x * Math.cos(th) + y * Math.sin(th));
+              v = (1 + a * a + 2 * a * Math.cos(dphi)) / 4;
+            }
+            const i = (y * W + x) * 4;
+            const onPlate = Math.abs(x - plateX) < 2;
+            d[i] = onPlate ? 255 : 40 + v * 120; d[i + 1] = onPlate ? 255 : 30 + v * 200; d[i + 2] = onPlate ? 255 : 80 + v * 175; d[i + 3] = 255;
+          }
+          // 描画（拡大）
+          const off = (ANIMS.hologram._off ||= document.createElement("canvas"));
+          off.width = W; off.height = H;
+          off.getContext("2d").putImageData(img, 0, 0);
+          ctx.imageSmoothingEnabled = true;
+          ctx.drawImage(off, 0, 0, view.w, view.h);
+          glow(ctx, ox * RES, oy * RES, 16, "rgba(255,240,150,1)");
+          label(ctx, "物体（の1点）", ox * RES, oy * RES + 26, { size: 12, align: "center", weight: 700 });
+          label(ctx, "写真乾板", plateX * RES, 20, { size: 12, align: "center", weight: 700 });
+          if (P.mode !== "object") arrow(ctx, 30, view.h - 40, 30 + Math.cos(th) * 60, view.h - 40 + Math.sin(th) * 60, COL.cyan, 2);
+          if (P.mode !== "object") label(ctx, "参照光", 30, view.h - 50, { size: 11, color: COL.cyan });
+        },
+        readouts() {
+          const th = (P.angle * Math.PI) / 180;
+          const d500 = th > 0 ? 0.5 / Math.sin(th) : Infinity;
+          return [
+            ["縞の間隔の目安 d = λ / sinθ（λ = 0.5 μm）", isFinite(d500) ? `${d500.toFixed(2)} μm` : "∞（同じ向き）"],
+            ["必要な記録の解像度", isFinite(d500) ? `1 mmあたり約 ${Math.round(1000 / d500)} 本` : "—"],
+            ["表示", { record: "時間平均した明るさ（記録される縞）", object: "物体からの球面波", reference: "斜めから来る平面波" }[P.mode]],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 31. バサード・ラムジェット                                              */
+  /* ================================================================== */
+  ANIMS.ramjet = {
+    controls: [
+      { type: "range", id: "R", label: "スクープの半径", min: 1, max: 4, step: 0.05, value: 3, log: true, unit: "km" },
+      { type: "range", id: "v", label: "速さ（光速の何%か）", min: 1, max: 99, step: 1, value: 10, unit: "%" },
+      { type: "range", id: "n", label: "星間物質の密度", min: -1, max: 2, step: 0.1, value: 0, log: true, unit: "個/cm³" },
+    ],
+    create(ctx, view, P) {
+      const stars = makeStars(80);
+      let t = 0, atoms = [];
+      for (let i = 0; i < 160; i++) atoms.push({ x: Math.random(), y: Math.random() });
+      return {
+        update(dt) {
+          t += dt;
+          const sp = 0.15 + P.v / 100;
+          for (const a of atoms) {
+            a.x -= sp * dt * 0.6;
+            const sx = 0.3, sy = 0.5;
+            if (a.x < 0.9 && a.x > sx) { const pull = clamp((0.9 - a.x) / 0.6, 0, 1) * 0.9 * dt * sp; a.y += (sy - a.y) * pull * 2.2; }
+            if (a.x < sx + 0.02 && Math.abs(a.y - sy) < 0.05) { a.x = 1 + Math.random() * 0.2; a.y = Math.random(); a.fused = 0.3; }
+            if (a.x < -0.05) { a.x = 1 + Math.random() * 0.2; a.y = Math.random(); }
+            if (a.fused) a.fused -= dt;
+          }
+        },
+        draw() {
+          drawBg(ctx, view, stars, t);
+          const W = view.w, H = view.h, sx = W * 0.3, sy = H * 0.5;
+          // 磁場の線（じょうご）
+          for (let i = -5; i <= 5; i++) {
+            if (!i) continue;
+            ctx.strokeStyle = `rgba(79,227,255,${0.15 + 0.05 * (6 - Math.abs(i))})`; ctx.lineWidth = 1.2; ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.bezierCurveTo(sx + W * 0.25, sy + i * 6, sx + W * 0.45, sy + i * H * 0.09, W, sy + i * H * 0.1);
+            ctx.stroke();
+          }
+          // 宇宙船
+          ctx.fillStyle = "#cfd8e8"; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - 90, sy - 12); ctx.lineTo(sx - 90, sy + 12); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = "#9fb0c8"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sx, sy, 14, -1.2, 1.2); ctx.stroke();
+          glow(ctx, sx - 100, sy, 30 + 6 * Math.sin(t * 20), "rgba(255,180,255,0.9)");
+          ctx.strokeStyle = "rgba(255,170,255,0.6)"; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(sx - 95, sy); ctx.lineTo(0, sy); ctx.stroke();
+          for (const a of atoms) dot(ctx, a.x * W, a.y * H, 1.8, a.fused > 0 ? "#ffd34f" : "rgba(220,230,255,0.8)");
+          label(ctx, "磁場のじょうご（ラムスクープ）", sx + W * 0.25, sy - H * 0.38, { size: 12, color: COL.cyan, align: "center" });
+          label(ctx, "星間物質の水素 →→ 集めて核融合 →→ 排気", 14, 22, { size: 12, weight: 700 });
+        },
+        readouts() {
+          const R = P.R * 1000, v = (P.v / 100) * 2.998e8, n = P.n * 1e6;
+          const mdot = n * 1.6726e-27 * Math.PI * R * R * v;
+          const Pw = 0.007 * mdot * 8.988e16;
+          const drag = mdot * v;
+          return [
+            ["集まる水素", `${sci(mdot * 1000)} g/s`],
+            ["すべて核融合できた場合の出力", `${sci(Pw)} W`],
+            ["スクープの抵抗（ブレーキ） ṁv", `${sci(drag)} N`],
+            ["排気の最大推力の目安 √(2εṁ²c²)", `${sci(mdot * Math.sqrt(2 * 0.007) * 2.998e8)} N`],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 32. タキオン：時空図と因果の逆転                                        */
+  /* ================================================================== */
+  ANIMS.tachyon = {
+    controls: [
+      { type: "range", id: "u", label: "信号の速さ u（光速の何倍か）", min: 0.2, max: 4, step: 0.05, value: 2.5, unit: "c" },
+      { type: "range", id: "beta", label: "観測者の速さ β = v/c", min: -0.95, max: 0.95, step: 0.01, value: 0.6 },
+    ],
+    create(ctx, view, P) {
+      let t = 0;
+      return {
+        update(dt) { t += dt; },
+        draw() {
+          ctx.fillStyle = "#070b18"; ctx.fillRect(0, 0, view.w, view.h);
+          const cx = view.w * 0.5, cy = view.h * 0.58, S = Math.min(view.w * 0.2, view.h * 0.2);
+          const b = P.beta, g = 1 / Math.sqrt(1 - b * b);
+          const tf = (x, tt) => [g * (x - b * tt), g * (tt - b * x)]; // (x', t')
+          const toScr = (x, tt) => [cx + x * S, cy - tt * S];
+          // 光円錐
+          ctx.fillStyle = "rgba(255,255,255,0.06)";
+          ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + 3 * S, cy - 3 * S); ctx.lineTo(cx - 3 * S, cy - 3 * S); ctx.closePath(); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + 3 * S, cy + 3 * S); ctx.lineTo(cx - 3 * S, cy + 3 * S); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = "rgba(255,211,79,0.5)"; ctx.setLineDash([4, 4]);
+          ctx.beginPath(); ctx.moveTo(cx - 3 * S, cy + 3 * S); ctx.lineTo(cx + 3 * S, cy - 3 * S); ctx.moveTo(cx - 3 * S, cy - 3 * S); ctx.lineTo(cx + 3 * S, cy + 3 * S); ctx.stroke(); ctx.setLineDash([]);
+          label(ctx, "光（u = c）", cx + 2.2 * S, cy - 2.4 * S, { size: 11, color: COL.yel });
+          // 軸（元の観測者）
+          ctx.strokeStyle = "rgba(160,190,255,0.35)"; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(cx - 3.5 * S, cy); ctx.lineTo(cx + 3.5 * S, cy); ctx.moveTo(cx, cy + 2 * S); ctx.lineTo(cx, cy - 2.8 * S); ctx.stroke();
+          label(ctx, "x", cx + 3.4 * S, cy + 14, { size: 11, color: COL.dim }); label(ctx, "t", cx + 6, cy - 2.7 * S, { size: 11, color: COL.dim });
+          // 動く観測者の軸（t' 軸と x' 軸）
+          ctx.strokeStyle = "rgba(255,95,168,0.6)";
+          ctx.beginPath(); ctx.moveTo(...toScr(-2.5 * b, -2.5)); ctx.lineTo(...toScr(2.5 * b, 2.5)); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(...toScr(-3, -3 * b)); ctx.lineTo(...toScr(3, 3 * b)); ctx.stroke();
+          label(ctx, "t′", ...toScr(2.5 * b + 0.1, 2.5), { size: 11, color: COL.mag });
+          label(ctx, "x′（t′=0 の同時刻線）", ...toScr(3, 3 * b - 0.15), { size: 11, color: COL.mag, align: "right" });
+          // 信号：A(0,0) → B(u*T, T)
+          const T = 1, xB = P.u * T;
+          const f = (t * 0.5) % 1.3;
+          const [Ax, Ay] = toScr(0, 0), [Bx, By] = toScr(xB, T);
+          ctx.strokeStyle = P.u > 1 ? COL.red : COL.grn; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(Ax, Ay); ctx.lineTo(lerp(Ax, Bx, clamp(f, 0, 1)), lerp(Ay, By, clamp(f, 0, 1))); ctx.stroke();
+          dot(ctx, Ax, Ay, 6, "#fff"); dot(ctx, Bx, By, 6, "#fff");
+          label(ctx, "A 発信", Ax - 8, Ay + 18, { size: 12, weight: 700, align: "right" });
+          label(ctx, "B 受信", Bx + 8, By - 8, { size: 12, weight: 700 });
+          const [, tB] = tf(xB, T);
+          const msg = tB < 0 ? "動く観測者から見ると、B（受信）が A（発信）より先に起きる → 因果の逆転！" : "どちらの観測者から見ても、発信 → 受信 の順";
+          label(ctx, msg, 14, 22, { size: 13, weight: 800, color: tB < 0 ? COL.red : COL.grn });
+          label(ctx, "灰色の円錐 = 光の届く範囲（光円錐）。その外を通る世界線は光より速い", 14, view.h - 12, { size: 11, color: COL.dim });
+        },
+        readouts() {
+          const b = P.beta, g = 1 / Math.sqrt(1 - b * b);
+          const dtp = g * (1 - b * P.u);
+          const crit = P.u > 1 ? 1 / P.u : null;
+          return [
+            ["信号の速さ", `${P.u.toFixed(2)} c ${P.u > 1 ? "（超光速）" : "（光速以下）"}`],
+            ["動く観測者から見た Δt′ = γ(1 − βu)", dtp.toFixed(3)],
+            ["順序が逆転する観測者の速さ", crit ? `β > ${crit.toFixed(3)}` : "なし（u ≤ c）"],
+            ["E = mc²/√(1−u²/c²) の分母", P.u > 1 ? "虚数 → 質量も虚数なら E は実数" : (Math.sqrt(1 - P.u * P.u)).toFixed(3)],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 33. 小惑星衝突と惑星防衛                                                */
+  /* ================================================================== */
+  ANIMS.asteroid = {
+    controls: [
+      { type: "range", id: "lead", label: "衝突までの時間（軌道変更してから）", min: 0.1, max: 20, step: 0.1, value: 10, unit: "年" },
+      { type: "range", id: "dv", label: "速度変化 Δv", min: -1, max: 2, step: 0.05, value: 0, log: true, unit: "cm/s" },
+      { type: "range", id: "D", label: "小惑星の直径", min: 1, max: 4, step: 0.05, value: 2.5, log: true, unit: "m" },
+    ],
+    create(ctx, view, P) {
+      const stars = makeStars(120);
+      let t = 0;
+      return {
+        update(dt) { t += dt; },
+        draw() {
+          drawBg(ctx, view, stars, t);
+          const W = view.w, H = view.h;
+          const shift = 3 * (P.dv / 100) * P.lead * 3.156e7; // m
+          const RE = 6.371e6, miss = shift > RE * 1.2;
+          const ex = W * 0.8, ey = H * 0.5, er = Math.min(H * 0.12, 50);
+          const scale = er / RE; // px per m（地球付近）
+          const off = Math.min(shift * scale, H * 0.42);
+          // 軌道（元の予定）と変更後
+          const f = (t * 0.18) % 1.25;
+          const x0 = W * 0.04, y0 = H * 0.5;
+          ctx.setLineDash([4, 6]); ctx.strokeStyle = "rgba(255,95,95,0.5)"; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+          ctx.strokeStyle = "rgba(109,255,156,0.6)"; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + ex) / 2, y0, ex, ey - off); ctx.stroke();
+          label(ctx, "元の軌道（衝突コース）", (x0 + ex) / 2, y0 + 18, { size: 11, align: "center", color: "rgba(255,120,120,0.8)" });
+          label(ctx, `変更後：${miss ? "地球を外れる" : "まだ衝突する"}`, (x0 + ex) / 2, y0 - off / 2 - 12, { size: 12, weight: 700, align: "center", color: miss ? COL.grn : COL.org });
+          // 地球
+          const eg = ctx.createRadialGradient(ex - er * 0.3, ey - er * 0.3, 3, ex, ey, er);
+          eg.addColorStop(0, "#7fb8ff"); eg.addColorStop(1, "#1d4f9c");
+          ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, ey, er, 0, TAU); ctx.fill();
+          label(ctx, "地球", ex, ey + er + 16, { size: 11, align: "center" });
+          // 小惑星
+          const ff = clamp(f, 0, 1);
+          const bx = (1 - ff) * (1 - ff) * x0 + 2 * (1 - ff) * ff * ((x0 + ex) / 2) + ff * ff * ex;
+          const by = (1 - ff) * (1 - ff) * y0 + 2 * (1 - ff) * ff * y0 + ff * ff * (ey - off);
+          dot(ctx, bx, by, 6, "#a89a86");
+          if (f < 0.08) { glow(ctx, x0 + 6, y0, 26, "rgba(255,240,180,1)", 1 - f / 0.08); label(ctx, "探査機が衝突！", x0 + 10, y0 - 24, { size: 12, weight: 800, color: COL.yel }); }
+          if (!miss && ff >= 1) glow(ctx, ex - er, ey - off, 40, "rgba(255,180,90,1)", 0.8);
+          label(ctx, `位置のずれ 3Δv·t ≈ ${sci(shift / 1000)} km（地球の半径 6,371 km）`, 14, 22, { size: 13, weight: 800 });
+        },
+        readouts() {
+          const shift = 3 * (P.dv / 100) * P.lead * 3.156e7;
+          const D = P.D, m = (Math.PI / 6) * 3000 * D ** 3, E = 0.5 * m * 2e4 ** 2;
+          const Mt = E / 4.184e15;
+          const dvNeeded = 6.371e6 * 1.2 / (3 * P.lead * 3.156e7) * 100;
+          return [
+            ["位置のずれ", `${sci(shift / 1000)} km（地球半径の ${sci(shift / 6.371e6)} 倍）`],
+            ["地球を外すのに必要な Δv", `${sci(dvNeeded)} cm/s`],
+            ["小惑星の質量", `${sci(m)} kg`],
+            ["衝突エネルギー（20 km/s）", `${sci(Mt)} メガトン（広島型の ${sci(Mt / 0.015)} 倍）`],
+            ["必要な体当たり探査機（β=3.6, 6 km/s）", `${sci((dvNeeded / 100) * m / (3.6 * 6000))} kg`],
+          ];
+        },
+      };
+    },
+  };
+
+  /* ================================================================== */
+  /* 34. トラクタービーム：光ピンセット                                       */
+  /* ================================================================== */
+  ANIMS.tractorbeam = {
+    controls: [
+      { type: "range", id: "P", label: "レーザー出力", min: 1, max: 1000, step: 1, value: 100, unit: "mW" },
+      { type: "range", id: "Q", label: "捕捉効率 Q", min: 0.02, max: 0.3, step: 0.01, value: 0.1 },
+      { type: "range", id: "flow", label: "まわりの水の流れ（外乱）", min: 0, max: 1, step: 0.05, value: 0.3 },
+    ],
+    create(ctx, view, P) {
+      let t = 0, bx = 0, by = 0, vx = 0, vy = 0, lost = false, lostT = 0;
+      return {
+        update(dt) {
+          t += dt;
+          const tx = Math.sin(t * 0.6) * 0.55, ty = Math.sin(t * 0.9) * 0.25;
+          const k = 9 * (P.P / 100) * (P.Q / 0.1);
+          if (!lost) {
+            const ax = -k * (bx - tx) + P.flow * 2.2 + rand(-1, 1) * 0.8, ay = -k * (by - ty) + rand(-1, 1) * 0.8;
+            vx = (vx + ax * dt) * Math.exp(-dt * 6); vy = (vy + ay * dt) * Math.exp(-dt * 6);
+            bx += vx * dt; by += vy * dt;
+            if (Math.hypot(bx - tx, by - ty) > 0.35) { lost = true; lostT = 0; }
+          } else {
+            lostT += dt; bx += P.flow * 0.4 * dt + 0.02; by += rand(-1, 1) * 0.01;
+            if (lostT > 2) { lost = false; bx = tx; by = ty; vx = vy = 0; }
+          }
+          this._t = [tx, ty];
+        },
+        draw() {
+          ctx.fillStyle = "#06121c"; ctx.fillRect(0, 0, view.w, view.h);
+          const W = view.w, H = view.h, cx = W * 0.45, cy = H * 0.5, S = Math.min(W, H) * 0.42;
+          const [tx, ty] = this._t || [0, 0];
+          const fx = cx + tx * S, fy = cy + ty * S;
+          // ビーム（上から下へ絞り込む）
+          const g = ctx.createLinearGradient(0, 0, 0, H);
+          g.addColorStop(0, "rgba(120,255,140,0.05)"); g.addColorStop(0.5, `rgba(120,255,140,${0.25 + 0.4 * Math.min(1, P.P / 300)})`); g.addColorStop(1, "rgba(120,255,140,0.05)");
+          ctx.fillStyle = g; ctx.beginPath();
+          ctx.moveTo(fx - S * 0.5, 0); ctx.lineTo(fx - 5, fy); ctx.lineTo(fx - S * 0.5, H); ctx.lineTo(fx + S * 0.5, H); ctx.lineTo(fx + 5, fy); ctx.lineTo(fx + S * 0.5, 0); ctx.closePath(); ctx.fill();
+          glow(ctx, fx, fy, 22, "rgba(180,255,190,0.9)");
+          label(ctx, "焦点（最も明るい）", fx + 14, fy - 14, { size: 11, color: COL.grn });
+          // 流れ
+          for (let i = 0; i < 14; i++) { const y = ((i * 37) % H), x = ((t * 60 * P.flow + i * 97) % W); ctx.strokeStyle = "rgba(120,180,255,0.2)"; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 18, y); ctx.stroke(); }
+          // ビーズ
+          const px = cx + bx * S, py = cy + by * S;
+          const bg = ctx.createRadialGradient(px - 5, py - 5, 2, px, py, 14);
+          bg.addColorStop(0, "#ffffff"); bg.addColorStop(1, "rgba(180,200,230,0.6)");
+          ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(px, py, 14, 0, TAU); ctx.fill();
+          if (!lost) arrow(ctx, px, py, px + (fx - px) * 0.8, py + (fy - py) * 0.8, COL.yel, 2, 6);
+          label(ctx, lost ? "力が足りず、流れに負けて逃げた！" : "ビーズは光の強い焦点に引き戻される（勾配力）", 14, 22, { size: 13, weight: 800, color: lost ? COL.red : COL.text });
+          label(ctx, "直径1 μm程度の透明なビーズ（拡大表示）", 14, H - 12, { size: 11, color: COL.dim });
+        },
+        readouts() {
+          const F = (P.Q * 1.33 * (P.P / 1000)) / 2.998e8;
+          return [
+            ["最大の捕捉力 F = QnP/c", `${(F * 1e12).toFixed(1)} pN`],
+            ["参考：大腸菌が泳ぐ力", "約 0.5 pN"],
+            ["1トンの物体を1 gで持ち上げるのに必要な出力", `${sci((1000 * 9.81 * 2.998e8) / P.Q)} W`],
+            ["人類の総エネルギー消費（約1.9×10¹³ W）の", `${sci((1000 * 9.81 * 2.998e8) / P.Q / 1.9e13)} 倍`],
+          ];
+        },
+      };
+    },
+  };
+
   window.ANIMS = ANIMS;
 })();
