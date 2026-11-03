@@ -58,6 +58,16 @@ button, input, select { font: inherit; color: inherit; }
 .brand-sub { display: block; font-family: "Orbitron", var(--font); font-size: 10px; color: var(--muted); letter-spacing: 0.12em; }
 .menu-btn { display: none; background: none; border: 1px solid var(--line); border-radius: 8px; width: 38px; height: 38px; cursor: pointer; font-size: 18px; }
 
+.top-links { margin-left: auto; display: flex; gap: 6px; }
+.top-links a {
+  text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 99px;
+  border: 1px solid var(--line); color: var(--muted);
+}
+.top-links a:hover { color: var(--text); border-color: var(--accent); }
+.top-links a.on { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+
+@media (max-width: 860px) { .top-links a { padding: 5px 9px; font-size: 12px; } .brand-sub { display: none; } }
+
 /* ---------- layout ---------- */
 .layout { display: grid; grid-template-columns: var(--sidebar) 1fr; min-height: calc(100vh - 60px); }
 .sidebar {

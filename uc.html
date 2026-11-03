@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>宇宙世紀年表 — 舞台装置</title>
+  <meta name="description" content="ガンダムの宇宙世紀の主な出来事を、地球・月・ラグランジュ点の地図上でアニメーション再生する年表。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/uc.css">
+  <script defer src="js/uc-data.js"></script>
+  <script defer src="js/uc.js"></script>
+</head>
+<body class="uc-page">
+  <header class="topbar">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>
+        <span class="brand-title">舞台装置</span>
+        <span class="brand-sub">BUTAI-SOUCHI ／ SF概念図鑑</span>
+      </span>
+    </a>
+    <nav class="top-links">
+      <a href="index.html">概念図鑑</a>
+      <a href="uc.html" class="on" aria-current="page">宇宙世紀年表</a>
+    </nav>
+  </header>
+
+  <main class="uc-main">
+    <div class="uc-head">
+      <p class="eyebrow">UNIVERSAL CENTURY TIMELINE</p>
+      <h1>宇宙世紀年表</h1>
+      <p class="lead">『機動戦士ガンダム』シリーズの宇宙世紀（U.C.）で起きた主な出来事を、地球・月・ラグランジュ点の地図の上で再生します。地上の出来事では地球にクローズアップします。</p>
+    </div>
+
+    <div class="uc-grid">
+      <section class="uc-stage-col">
+        <div id="stage" class="uc-stage">
+          <canvas id="ucCanvas" role="img" aria-label="宇宙世紀の出来事の地図アニメーション"></canvas>
+        </div>
+        <div class="uc-controls">
+          <button id="prev" type="button" class="tool-btn" aria-label="前の出来事">◀◀</button>
+          <button id="play" type="button" class="tool-btn play">▶ 再生</button>
+          <button id="next" type="button" class="tool-btn" aria-label="次の出来事">▶▶</button>
+          <input id="scrub" type="range" min="0" value="0" step="1" aria-label="年表の位置">
+          <span id="counter" class="counter"></span>
+          <label class="speed-l" for="speed">速さ
+            <select id="speed">
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="2">2×</option>
+            </select>
+          </label>
+        </div>
+        <article id="card" class="uc-card" aria-live="polite"></article>
+      </section>
+
+      <aside class="uc-list-col" aria-label="出来事の一覧">
+        <ol id="eventList" class="uc-list"></ol>
+      </aside>
+    </div>
+
+    <section class="uc-notes">
+      <h2>地図の見方</h2>
+      <ul>
+        <li>中央が地球、点線の円が月の公転軌道です。月は地球のまわりを回り、それにつれて5つのラグランジュ点（L1〜L5）も回ります。</li>
+        <li>ラグランジュ点は、地球と月の重力と遠心力が釣り合う場所です。宇宙世紀では、ここにスペースコロニー群「サイド」が建設されました（L1：サイド5、L2：サイド3、L3：サイド7、L4：サイド2・6、L5：サイド1・4）。</li>
+        <li>距離や大きさは見やすさを優先した模式図で、実際の縮尺ではありません。日付や設定は作品・資料によって異なる場合があります。</li>
+      </ul>
+      <p class="credit">非公式のファン向け解説ページです。『機動戦士ガンダム』シリーズの作品・設定の権利は ©創通・サンライズ に帰属します。</p>
+    </section>
+  </main>
+</body>
+</html>
