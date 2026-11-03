@@ -3,14 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>宇宙世紀年表 — 舞台装置</title>
-  <meta name="description" content="ガンダムの宇宙世紀の主な出来事を、地球・月・ラグランジュ点の地図上でアニメーション再生する年表。">
+  <title>作品年表 — 舞台装置</title>
+  <meta name="description" content="ガンダムシリーズ各作品と銀河英雄伝説の主な出来事を、地図上でアニメーション再生する年表。">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/uc.css">
   <script defer src="js/uc-data.js"></script>
+  <script defer src="js/worlds.js"></script>
   <script defer src="js/uc.js"></script>
 </head>
 <body class="uc-page">
@@ -24,21 +25,26 @@
     </a>
     <nav class="top-links">
       <a href="index.html">概念図鑑</a>
-      <a href="uc.html" class="on" aria-current="page">宇宙世紀年表</a>
+      <a href="uc.html" class="on" aria-current="page">作品年表</a>
     </nav>
   </header>
 
   <main class="uc-main">
     <div class="uc-head">
-      <p class="eyebrow">UNIVERSAL CENTURY TIMELINE</p>
-      <h1>宇宙世紀年表</h1>
-      <p class="lead">『機動戦士ガンダム』シリーズの宇宙世紀（U.C.）で起きた主な出来事を、地球・月・ラグランジュ点の地図の上で再生します。地上の出来事では地球にクローズアップします。</p>
+      <p class="eyebrow">SF TIMELINE THEATER</p>
+      <h1>作品年表</h1>
+      <p class="lead">SF作品の歴史を、舞台となる宇宙の地図の上で再生します。ガンダムシリーズでは地球・月・ラグランジュ点の地図を使い、地上の出来事では地球にクローズアップします。『銀河英雄伝説』では銀河の地図の上で、会戦の起きた星域に寄って見せます。</p>
+    </div>
+    <div id="worldTabs" class="world-tabs" role="group" aria-label="作品・暦の選択"></div>
+    <div class="world-head">
+      <h2 id="worldTitle"></h2>
+      <p id="worldIntro"></p>
     </div>
 
     <div class="uc-grid">
       <section class="uc-stage-col">
         <div id="stage" class="uc-stage">
-          <canvas id="ucCanvas" role="img" aria-label="宇宙世紀の出来事の地図アニメーション"></canvas>
+          <canvas id="ucCanvas" role="img" aria-label="作品の出来事の地図アニメーション"></canvas>
         </div>
         <div class="uc-controls">
           <button id="prev" type="button" class="tool-btn" aria-label="前の出来事">◀◀</button>
@@ -66,10 +72,12 @@
       <h2>地図の見方</h2>
       <ul>
         <li>中央が地球、点線の円が月の公転軌道です。月は地球のまわりを回り、それにつれて5つのラグランジュ点（L1〜L5）も回ります。</li>
-        <li>ラグランジュ点は、地球と月の重力と遠心力が釣り合う場所です。宇宙世紀では、ここにスペースコロニー群「サイド」が建設されました（L1：サイド5、L2：サイド3、L3：サイド7、L4：サイド2・6、L5：サイド1・4）。</li>
+        <li>ラグランジュ点は、地球と月の重力と遠心力が釣り合う場所です。宇宙世紀では、ここにスペースコロニー群「サイド」が建設されました（L1：サイド5、L2：サイド3、L3：サイド7、L4：サイド2・6、L5：サイド1・4）。他のガンダム作品でもコロニーの多くはラグランジュ点に置かれています。</li>
+        <li>火星・木星・水星・金星など遠くの天体は、縮尺を無視して地図の端に描いています。</li>
+        <li>『銀河英雄伝説』の地図は、銀河帝国と自由惑星同盟、二つの回廊（イゼルローン回廊・フェザーン回廊）の位置関係をわかりやすくした模式図です。宇宙暦（SE）＝帝国暦（IC）＋309年。</li>
         <li>距離や大きさは見やすさを優先した模式図で、実際の縮尺ではありません。日付や設定は作品・資料によって異なる場合があります。</li>
       </ul>
-      <p class="credit">非公式のファン向け解説ページです。『機動戦士ガンダム』シリーズの作品・設定の権利は ©創通・サンライズ に帰属します。</p>
+      <p class="credit">非公式のファン向け解説ページです。ガンダムシリーズの作品・設定の権利は ©創通・サンライズ（各作品の権利者を含む）に、『銀河英雄伝説』は ©田中芳樹 に帰属します。</p>
     </section>
   </main>
 </body>

@@ -5,7 +5,7 @@
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const lerp = (a, b, t) => a + (b - a) * t;
   const ease = (t) => t * t * (3 - 2 * t);
-  const EVENTS = window.UC_EVENTS, WORKS = window.UC_WORKS;
+
 
   /* ---------- 大陸の簡略ポリゴン [経度, 緯度] ---------- */
   const LAND = [
@@ -94,25 +94,20 @@
     };
   }
 
-  /* ---------- 宇宙の場所（地球中心、月の公転半径 = 1） ---------- */
+  /* ---------- 共通の場所（地球中心、月の公転半径 = 1） ---------- */
   const S60 = Math.sin(60 * D2R);
-  const SPACE_PLACES = {
-    moon: { p: [1, 0], name: "月" },
-    granada: { p: [1.06, 0.035], name: "月面都市グラナダ" },
-    side5: { p: [0.84, 0], name: "サイド5（ルウム）／L1" },
-    side3: { p: [1.2, 0], name: "サイド3（ジオン）／L2" },
-    side7: { p: [-1, 0], name: "サイド7／L3" },
-    gryps: { p: [-1.02, -0.13], name: "グリプス（サイド7）" },
-    side2: { p: [0.5 - 0.06, S60], name: "サイド2／L4" },
-    side6: { p: [0.5 + 0.07, S60 + 0.03], name: "サイド6／L4" },
-    side1: { p: [0.5 - 0.06, -S60], name: "サイド1／L5" },
-    side4: { p: [0.5 + 0.07, -S60 - 0.03], name: "サイド4（フロンティア）／L5" },
-    solomon: { p: [0.72, -0.62], name: "ソロモン（コンペイトウ）" },
-    abaoaqu: { p: [0.95, 0.26], name: "ア・バオア・クー" },
-    laplace: { p: [0.12, 0.08], name: "地球軌道（首相官邸ラプラス跡）" },
-    earthorbit: { p: [0.16, -0.1], name: "地球軌道" },
+  const BASE_PLACES = {
+    moon: { p: [1, 0], name: "月", type: "moon" },
+    earthorbit: { p: [0.16, -0.1], name: "地球軌道", type: "point" },
+    l1: { p: [0.84, 0], name: "L1", type: "point" },
+    l2: { p: [1.2, 0], name: "L2", type: "point" },
+    l3: { p: [-1, 0], name: "L3", type: "point" },
+    l4: { p: [0.5, S60], name: "L4", type: "point" },
+    l5: { p: [0.5, -S60], name: "L5", type: "point" },
   };
-  const LPOINTS = [["L1 サイド5", [0.84, 0], -1], ["L2 サイド3", [1.2, 0], 1], ["L3 サイド7", [-1, 0], -1], ["L4 サイド2・6", [0.5, S60], 1], ["L5 サイド1・4", [0.5, -S60], -1]];
+  const LPOS = [[[0.84, 0], -1], [[1.2, 0], 1], [[-1, 0], -1], [[0.5, S60], 1], [[0.5, -S60], -1]];
+  const WORLDS = window.TIMELINE_WORLDS;
+  let world, EVENTS, WORKS, PLACES;
 
   /* ---------- DOM ---------- */
   const $ = (s) => document.querySelector(s);
@@ -131,24 +126,7 @@
   resize();
 
   const list = $("#eventList");
-  let lastWork = null;
-  EVENTS.forEach((e, i) => {
-    if (e.work !== lastWork) {
-      const h = document.createElement("li");
-      h.className = "work-h";
-      h.innerHTML = `<span class="dot" style="background:${WORKS[e.work].color}"></span>${WORKS[e.work].name}`;
-      list.appendChild(h);
-      lastWork = e.work;
-    }
-    const li = document.createElement("li");
-    const b = document.createElement("button");
-    b.type = "button"; b.className = "ev"; b.dataset.i = i;
-    b.innerHTML = `<span class="ev-date">${e.date}</span><span class="ev-title">${e.title}</span>`;
-    b.addEventListener("click", () => go(i, true));
-    li.appendChild(b); list.appendChild(li);
-  });
   const scrub = $("#scrub");
-  scrub.max = EVENTS.length - 1;
   scrub.addEventListener("input", () => go(+scrub.value, true));
   $("#prev").addEventListener("click", () => go(Math.max(0, cur - 1), true));
   $("#next").addEventListener("click", () => go(Math.min(EVENTS.length - 1, cur + 1), true));
@@ -157,11 +135,62 @@
   const speedSel = $("#speed");
   const updatePlay = () => { playBtn.textContent = playing ? "❚❚ 一時停止" : "▶ 再生"; playBtn.setAttribute("aria-pressed", String(playing)); };
 
+  // 世界の切り替えタブ
+  const tabs = $("#worldTabs");
+  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説" };
+  for (const [sid, sname] of Object.entries(SERIES)) {
+    const grp = document.createElement("div");
+    grp.className = "tab-group";
+    grp.innerHTML = `<span class="tab-group-l">${sname}</span>`;
+    const row = document.createElement("div");
+    row.className = "tab-row";
+    for (const w of WORLDS.filter((x) => x.series === sid)) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "world-tab"; b.dataset.id = w.id; b.textContent = w.short;
+      b.addEventListener("click", () => setWorld(w.id, true));
+      row.appendChild(b);
+    }
+    grp.appendChild(row);
+    tabs.appendChild(grp);
+  }
+
+  function setWorld(id, user) {
+    world = WORLDS.find((w) => w.id === id) || WORLDS[0];
+    EVENTS = world.events; WORKS = world.works;
+    PLACES = Object.assign({}, world.map === "earthmoon" ? BASE_PLACES : {}, world.places);
+    tabs.querySelectorAll(".world-tab").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === world.id)));
+    $("#worldTitle").textContent = world.era;
+    $("#worldIntro").textContent = world.intro;
+    list.innerHTML = "";
+    let lastWork = null;
+    EVENTS.forEach((e, i) => {
+      if (e.work !== lastWork) {
+        const h = document.createElement("li");
+        h.className = "work-h";
+        h.innerHTML = `<span class="dot" style="background:${WORKS[e.work].color}"></span>${WORKS[e.work].name}`;
+        list.appendChild(h);
+        lastWork = e.work;
+      }
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "ev"; b.dataset.i = i;
+      b.innerHTML = `<span class="ev-date">${e.date}</span><span class="ev-title">${e.title}</span>`;
+      b.addEventListener("click", () => go(i, true));
+      li.appendChild(b); list.appendChild(li);
+    });
+    scrub.max = EVENTS.length - 1;
+    zoom = 0; gcx = 0; gcy = 0; gscale = 1;
+    if (user && location.hash !== "#" + world.id) history.replaceState(null, "", "#" + world.id);
+    list.parentElement.scrollTop = 0;
+    go(0);
+  }
+
   /* ---------- 状態 ---------- */
   let cur = 0, te = 0, playing = !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
   let zoom = 0, camLon = 140, camLat = 15, moonAng = -0.35, t = 0;
+  let gcx = 0, gcy = 0, gscale = 1;
   const stars = Array.from({ length: 220 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.1 + 0.2, a: Math.random() * 0.6 + 0.2 }));
-  const dur = (e) => (e.kind === "drop" ? 9 : e.kind === "axis" ? 9 : e.kind === "earth" ? 6.5 : 6);
+  const dur = (e) => (e.kind === "drop" ? 9 : e.kind === "axis" ? 9 : e.route ? 8 : e.kind === "earth" ? 6.5 : 6);
 
   function go(i, user) {
     cur = clamp(i, 0, EVENTS.length - 1); te = 0;
@@ -175,7 +204,7 @@
       col.scrollTo({ top, behavior: user ? "smooth" : "auto" });
     }
     const w = WORKS[e.work];
-    const placeName = e.placeName || (SPACE_PLACES[e.place] || {}).name || "";
+    const placeName = e.placeName || (PLACES[e.place] || {}).name || "";
     $("#card").innerHTML = `
       <div class="card-meta"><span class="chip" style="--c:${w.color}">${w.name}</span><span class="date">${e.date}</span></div>
       <h2>${e.title}</h2>
@@ -184,13 +213,14 @@
     $("#counter").textContent = `${cur + 1} / ${EVENTS.length}`;
   }
 
-  /* ---------- 描画 ---------- */
+  /* ---------- 描画ヘルパー ---------- */
   function spaceXY(p, cx, cy, Rm, k) {
     const c = Math.cos(moonAng), s = Math.sin(moonAng);
     const x = p[0] * c - p[1] * s, y = p[0] * s + p[1] * c;
     return [cx + x * Rm * k, cy + y * Rm * k];
   }
   function glow(x, y, r, col, a = 1) {
+    if (r <= 0) return;
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)");
     ctx.globalAlpha = a; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
@@ -208,24 +238,36 @@
     for (let k = -1; k <= 1; k++) ctx.fillRect(-len / 2, k * len * 0.11 - 0.5, len, 1);
     ctx.restore();
   }
+  function rockShape(x, y, r, col) {
+    ctx.fillStyle = col; ctx.beginPath();
+    for (let a = 0; a < 7; a++) { const rr = r * (a % 2 ? 1 : 0.75); const aa = (a / 7) * TAU; a ? ctx.lineTo(x + rr * Math.cos(aa), y + rr * Math.sin(aa)) : ctx.moveTo(x + rr, y); }
+    ctx.closePath(); ctx.fill();
+  }
 
+  /* ---------- フレーム ---------- */
   function frame(dt) {
     t += dt;
     const e = EVENTS[cur];
-    const speed = +speedSel.value;
     if (playing) {
-      te += dt * speed;
+      te += dt * +speedSel.value;
       if (te > dur(e) + 0.6) { if (cur < EVENTS.length - 1) go(cur + 1); else { playing = false; updatePlay(); } }
     }
-    moonAng += dt * 0.012;
+    if (world.map === "galaxy") drawGalaxy(dt, e);
+    else drawEarthMoon(dt, e);
+    const first = e.date.split("／")[0];
+    const yr = /暦/.test(first) ? first.replace(/(\d+)年.*$/, "$1年") : first.replace(/年.*$/, "");
+    text(yr, 18, 34, { s: 22, w: 800, c: "#fff" });
+  }
 
+  function drawEarthMoon(dt, e) {
+    moonAng += dt * 0.012;
     // カメラの目標
     let zt = 0, tLon = camLon + dt * 6, tLat = 15;
     if (e.kind === "earth") { zt = 1; tLon = e.earth[1]; tLat = clamp(e.earth[0], -55, 60); }
     if (e.kind === "drop" && te > 2.6) { zt = 1; tLon = e.earth[1]; tLat = clamp(e.earth[0], -55, 60); }
     if (e.kind === "axis") zt = te > 1 && te < 7.5 ? 0.38 : 0;
     zoom += (zt - zoom) * Math.min(1, dt * 2.2);
-    let dLon = ((tLon - camLon + 540) % 360) - 180;
+    const dLon = ((tLon - camLon + 540) % 360) - 180;
     camLon += dLon * Math.min(1, dt * (zt > 0.5 ? 2.5 : 1));
     camLat += (tLat - camLat) * Math.min(1, dt * 2.5);
 
@@ -235,22 +277,20 @@
     ctx.globalAlpha = 1;
 
     const cx = W * 0.5, cy = H * 0.52;
-    const Rm = Math.min(W * 0.36, H * 0.4);
-    const k = 1 + z * 7; // 宇宙の縮尺（地球にクローズアップすると外側へ流れる）
+    const Rm = Math.min(W * 0.34, H * 0.4);
+    const k = 1 + z * 7;
     const spaceA = clamp(1 - z * 1.4, 0, 1);
     const rE = lerp(Math.max(12, Rm * 0.085), Math.min(W, H) * 0.42, z);
 
     if (spaceA > 0.01) {
       ctx.globalAlpha = spaceA;
-      // 月の軌道
       ctx.strokeStyle = "rgba(150,170,220,0.25)"; ctx.setLineDash([3, 6]); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(cx, cy, Rm * k, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-      // ラグランジュ点
-      for (const [n, p, side] of LPOINTS) {
+      LPOS.forEach(([p, side], i) => {
         const [x, y] = spaceXY(p, cx, cy, Rm, k);
         ctx.strokeStyle = "rgba(160,190,255,0.35)"; ctx.beginPath(); ctx.arc(x, y, 14, 0, TAU); ctx.stroke();
-        text(n, x, y + side * 26 + (side > 0 ? 4 : 0), { s: 10, c: "rgba(170,195,255,0.8)", a: "center" });
-      }
+        text((world.lp || [])[i] || `L${i + 1}`, x, y + side * 26 + (side > 0 ? 4 : 0), { s: 10, c: "rgba(170,195,255,0.8)", a: "center" });
+      });
       // 月
       const [mx, my] = spaceXY([1, 0], cx, cy, Rm, k);
       const mr = Math.max(5, rE * 0.27 * (1 + z));
@@ -258,27 +298,38 @@
       mg.addColorStop(0, "#e6e6ea"); mg.addColorStop(1, "#7d7f88");
       ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(mx, my, mr, 0, TAU); ctx.fill();
       text("月", mx, my + mr + 13, { s: 10, a: "center", c: "#bbb" });
-      // サイド群・要塞
-      for (const [key, pl] of Object.entries(SPACE_PLACES)) {
-        if (key === "moon" || key === "laplace" || key === "earthorbit") continue;
-        const [x, y] = spaceXY(pl.p, cx, cy, Rm, k);
+      // 場所
+      for (const [key, pl] of Object.entries(PLACES)) {
+        if (pl.type === "point" || pl.type === "moon") continue;
         const active = e.place === key;
-        if (key.startsWith("side") || key === "gryps") {
-          for (let q = 0; q < 3; q++) colonyShape(x + (q - 1) * 4, y + ((q * 7) % 5) - 2, moonAng + q, 7, active ? "#ffe9a8" : "#8fa0c8");
-        } else if (key === "granada") {
-          ctx.fillStyle = active ? "#ffe9a8" : "#9aa"; ctx.fillRect(x - 2, y - 2, 4, 4);
-        } else {
-          ctx.fillStyle = active ? "#ffe9a8" : "#a0907a";
-          ctx.beginPath(); for (let a = 0; a < 7; a++) { const rr = 6 + (a % 2) * 2; const aa = (a / 7) * TAU; a ? ctx.lineTo(x + rr * Math.cos(aa), y + rr * Math.sin(aa)) : ctx.moveTo(x + rr, y); } ctx.fill();
+        if (pl.type === "far") {
+          // 遠方の天体は縮尺に関係なく地図の端に描く
+          const c = Math.cos(moonAng * 0), s = 0;
+          void c; void s;
+          const x = cx + pl.p[0] * Rm, y = cy + pl.p[1] * Rm * 0.62;
+          const fx = clamp(x, 40, W - 40), fy = clamp(y, 50, H - 30);
+          glow(fx, fy, pl.r * 2.2, pl.color, 0.35);
+          ctx.fillStyle = pl.color; ctx.beginPath(); ctx.arc(fx, fy, pl.r, 0, TAU); ctx.fill();
+          text(pl.name, fx, fy + pl.r + 14, { s: 10, a: "center", c: active ? "#ffe9a8" : "rgba(220,220,230,0.75)", w: active ? 800 : 500 });
+          pl._xy = [fx, fy];
+          continue;
         }
-        const asteroid = key === "solomon" || key === "abaoaqu";
-        if (active) text(pl.name.split("／")[0], x, y - 22, { s: 13, a: "center", c: "#ffe9a8", w: 800 });
-        else if (asteroid) text(pl.name.split("（")[0], x, y + 20, { s: 10, a: "center", c: "rgba(200,210,240,0.65)", w: 500 });
+        const [x, y] = spaceXY(pl.p, cx, cy, Rm, k);
+        if (pl.type === "colony") {
+          for (let q = 0; q < 3; q++) colonyShape(x + (q - 1) * 4, y + ((q * 7) % 5) - 2, moonAng + q, 7, active ? "#ffe9a8" : "#8fa0c8");
+        } else if (pl.type === "base") {
+          ctx.fillStyle = active ? "#ffe9a8" : "#9aa"; ctx.fillRect(x - 2, y - 2, 4, 4);
+        } else if (pl.type === "fortress") {
+          ctx.fillStyle = active ? "#ffe9a8" : "#b8c0d8"; ctx.beginPath(); ctx.ellipse(x, y, 9, 4, moonAng, 0, TAU); ctx.fill();
+        } else {
+          rockShape(x, y, 8, active ? "#ffe9a8" : "#a0907a");
+        }
+        if (active) text(pl.name, x, y - 22, { s: 13, a: "center", c: "#ffe9a8", w: 800 });
+        else if (pl.type === "rock" || pl.type === "fortress") text(pl.name.split("（")[0], x, y + 20, { s: 10, a: "center", c: "rgba(200,210,240,0.65)", w: 500 });
       }
       ctx.globalAlpha = 1;
     }
 
-    // 地球
     const ex = cx, ey = cy;
     renderGlobe(camLon, camLat);
     glow(ex, ey, rE * 1.25, "rgba(90,160,255,0.35)");
@@ -286,17 +337,142 @@
     if (z < 0.3) text("地球", ex, ey + rE + 14, { s: 11, a: "center", c: "#9cc7ff" });
 
     drawEventFx(e, { cx, cy, Rm, k, ex, ey, rE, z, spaceA });
+  }
 
-    // 年号の大表示
-    text(e.date.replace(/年.*$/, "").replace("U.C. ", "U.C. "), 18, 34, { s: 22, w: 800, c: "#fff" });
+  function placeXY(key, cx, cy, Rm, k) {
+    const pl = PLACES[key];
+    if (pl.type === "far") return pl._xy || [cx + pl.p[0] * Rm, cy + pl.p[1] * Rm * 0.62];
+    return spaceXY(pl.p, cx, cy, Rm, k);
+  }
+
+  /* ---------- 銀河の地図（銀河英雄伝説） ---------- */
+  const GAL = (() => {
+    const pts = [];
+    for (let i = 0; i < 2600; i++) {
+      const arm = i % 2, r = Math.pow(Math.random(), 0.6) * 1.15;
+      const a = arm * Math.PI + r * 3.2 + (Math.random() - 0.5) * 0.9;
+      pts.push({ x: Math.cos(a) * r * 1.05, y: Math.sin(a) * r * 0.62, b: Math.random() * 0.7 + 0.2, s: Math.random() * 1.3 + 0.3 });
+    }
+    const neb = [];
+    for (let i = 0; i < 260; i++) {
+      const y = -0.75 + Math.random() * 1.5;
+      if ((y > -0.4 && y < -0.2) || (y > 0.33 && y < 0.51)) continue;
+      neb.push({ x: (Math.random() - 0.5) * 0.16, y, r: 0.04 + Math.random() * 0.07, h: Math.random() });
+    }
+    return { pts, neb };
+  })();
+  const fleets = Array.from({ length: 36 }, (_, i) => ({ side: i % 2, ox: Math.random(), oy: Math.random(), ph: Math.random() * TAU }));
+
+  function drawGalaxy(dt, e) {
+    const W = view.w, H = view.h;
+    const pl = PLACES[e.place];
+    // カメラ
+    let tcx = 0, tcy = 0, ts = 1;
+    const routeOn = e.route && te < 4.5;
+    if (!routeOn && pl && e.fx) { tcx = pl.p[0]; tcy = pl.p[1]; ts = 2.6; }
+    else if (!routeOn && pl) { tcx = pl.p[0] * 0.5; tcy = pl.p[1] * 0.5; ts = 1.5; }
+    const kk = Math.min(1, dt * 2);
+    gcx += (tcx - gcx) * kk; gcy += (tcy - gcy) * kk; gscale += (ts - gscale) * kk;
+    const S = Math.min(W / 2.3, H / 1.55) * gscale;
+    const X = (x) => W / 2 + (x - gcx) * S, Y = (y) => H / 2 + (y - gcy) * S;
+
+    ctx.fillStyle = "#04030a"; ctx.fillRect(0, 0, W, H);
+    // 勢力の色
+    const tint = (x, y, col) => { const g = ctx.createRadialGradient(X(x), Y(y), 0, X(x), Y(y), S * 0.9); g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
+    tint(-0.6, 0, "rgba(255,190,80,0.16)");
+    tint(0.6, 0, "rgba(80,150,255,0.16)");
+    // 星
+    for (const p of GAL.pts) { ctx.globalAlpha = p.b; ctx.fillStyle = p.x < -0.1 ? "#ffe8c0" : p.x > 0.1 ? "#cfe0ff" : "#fff"; ctx.fillRect(X(p.x), Y(p.y), p.s, p.s); }
+    ctx.globalAlpha = 1;
+    // 航行不能宙域
+    for (const n of GAL.neb) glow(X(n.x), Y(n.y), n.r * S, `hsla(${330 + n.h * 40},70%,45%,0.5)`, 0.5);
+    // 回廊
+    ctx.setLineDash([4, 5]); ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
+    for (const [y0, y1] of [[-0.4, -0.2], [0.33, 0.51]]) { ctx.beginPath(); ctx.moveTo(X(-0.1), Y(y0)); ctx.lineTo(X(0.1), Y(y0)); ctx.moveTo(X(-0.1), Y(y1)); ctx.lineTo(X(0.1), Y(y1)); ctx.stroke(); }
+    ctx.setLineDash([]);
+    text("銀河帝国", X(-0.62), Y(-0.6), { s: 15 * Math.min(1.4, gscale), w: 800, a: "center", c: "rgba(255,210,120,0.9)" });
+    text("自由惑星同盟", X(0.62), Y(-0.6), { s: 15 * Math.min(1.4, gscale), w: 800, a: "center", c: "rgba(140,190,255,0.9)" });
+    text("航行不能宙域", X(0), Y(0.08), { s: 10, a: "center", c: "rgba(255,150,190,0.7)" });
+    text("イゼルローン回廊", X(0), Y(-0.43), { s: 10, a: "center", c: "rgba(255,255,255,0.6)" });
+    text("フェザーン回廊", X(0), Y(0.56), { s: 10, a: "center", c: "rgba(255,255,255,0.6)" });
+
+    // 場所
+    for (const [key, p] of Object.entries(PLACES)) {
+      if (p.type === "point") continue;
+      const x = X(p.p[0]), y = Y(p.p[1]), active = e.place === key;
+      if (p.type === "capital") {
+        glow(x, y, 16 * Math.sqrt(gscale), p.side === "empire" ? "rgba(255,210,120,0.9)" : "rgba(140,190,255,0.9)");
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, TAU); ctx.fill();
+      } else if (p.type === "fortress") {
+        const r = 6 * Math.sqrt(gscale);
+        const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r);
+        g.addColorStop(0, "#ffffff"); g.addColorStop(1, "#7f8aa0");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+      } else {
+        ctx.fillStyle = active ? "#ffe9a8" : "rgba(230,230,255,0.85)"; ctx.beginPath(); ctx.arc(x, y, 2.2, 0, TAU); ctx.fill();
+      }
+      text(p.name, x, y + 16 * Math.sqrt(gscale), { s: active ? 13 : 10, a: "center", w: active ? 800 : 500, c: active ? "#ffe9a8" : "rgba(220,225,245,0.75)" });
+    }
+
+    // 航路（艦隊の移動）
+    if (e.route) {
+      const pts = e.route.map((k) => PLACES[k].p);
+      ctx.strokeStyle = "rgba(255,233,168,0.6)"; ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+      ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)))); ctx.stroke(); ctx.setLineDash([]);
+      const f = clamp(te / 4, 0, 1) * (pts.length - 1);
+      const i0 = Math.min(pts.length - 2, Math.floor(f)), u = f - i0;
+      const fx = lerp(pts[i0][0], pts[i0 + 1][0], u), fy = lerp(pts[i0][1], pts[i0 + 1][1], u);
+      const ang = Math.atan2(pts[i0 + 1][1] - pts[i0][1], pts[i0 + 1][0] - pts[i0][0]);
+      const empire = (PLACES[e.route[0]].p[0] < 0) && e.route[0] !== "altair";
+      for (let q = 0; q < 7; q++) {
+        const ox = -Math.cos(ang) * (q % 4) * 7 - Math.sin(ang) * ((q % 3) - 1) * 7, oy = -Math.sin(ang) * (q % 4) * 7 + Math.cos(ang) * ((q % 3) - 1) * 7;
+        ship(X(fx) + ox, Y(fy) + oy, ang, empire ? "#ffd27a" : "#8fc0ff", 5);
+      }
+    }
+
+    // 会戦のクローズアップ
+    if (pl && e.fx && gscale > 1.6) {
+      const a = clamp((gscale - 1.6) / 1, 0, 1);
+      const cx = X(pl.p[0]), cy = Y(pl.p[1]);
+      ctx.globalAlpha = a;
+      if (e.fx === "battle") {
+        for (const f of fleets) {
+          const sx = f.side ? 1 : -1;
+          const x = cx + sx * (50 + f.ox * 90) + Math.sin(t * 0.8 + f.ph) * 4, y = cy + (f.oy - 0.5) * 120;
+          ship(x, y, f.side ? Math.PI : 0, f.side ? "#8fc0ff" : "#ffd27a", 6);
+          if (Math.sin(t * 6 + f.ph * 5) > 0.85) {
+            ctx.strokeStyle = f.side ? "rgba(140,200,255,0.9)" : "rgba(255,220,140,0.9)"; ctx.lineWidth = 1.2;
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(cx - sx * 30 + Math.sin(f.ph) * 20, y + Math.cos(t + f.ph) * 30); ctx.stroke();
+          }
+          if (Math.sin(t * 3 + f.ph * 7) > 0.97) glow(x, y, 14, "rgba(255,200,120,1)");
+        }
+      } else if (e.fx === "nuke") {
+        const f = clamp((te - 1) / 3, 0, 1);
+        ctx.fillStyle = "#6a8"; ctx.beginPath(); ctx.arc(cx, cy, 14, 0, TAU); ctx.fill();
+        if (te > 1) glow(cx, cy, 14 + f * 60, "rgba(255,255,220,1)", 1 - f);
+      } else if (e.fx === "flash") {
+        glow(cx, cy, 30 + 6 * Math.sin(t * 4), "rgba(255,230,180,0.9)", 0.6);
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (pl && !e.route) {
+      const pulse = (te * 1.2) % 1;
+      ctx.strokeStyle = `rgba(255,233,168,${1 - pulse})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(X(pl.p[0]), Y(pl.p[1]), 8 + pulse * 26, 0, TAU); ctx.stroke();
+    }
+    text("位置関係は物語を理解するための模式図です", W - 12, H - 10, { s: 10, a: "right", c: "rgba(200,200,220,0.5)", shadow: false });
+  }
+  function ship(x, y, ang, col, s) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(s, 0); ctx.lineTo(-s, -s * 0.5); ctx.lineTo(-s * 0.6, 0); ctx.lineTo(-s, s * 0.5); ctx.closePath(); ctx.fill();
+    ctx.restore();
   }
 
   function drawEventFx(e, g) {
     const { cx, cy, Rm, k, ex, ey, rE, z, spaceA } = g;
     const pulse = (te * 1.2) % 1;
     if (e.kind === "space" || e.kind === "axis") {
-      const pl = SPACE_PLACES[e.place];
-      const [x, y] = spaceXY(pl.p, cx, cy, Rm, k);
+      const [x, y] = placeXY(e.place, cx, cy, Rm, k);
       ctx.globalAlpha = spaceA;
       if (e.kind === "space") {
         ctx.strokeStyle = `rgba(255,233,168,${1 - pulse})`; ctx.lineWidth = 2;
@@ -312,8 +488,8 @@
       }
       if (e.fx === "beam" || e.fx === "laser") {
         const fromKey = e.from || e.place, toKey = e.to || e.place;
-        const [fx, fy] = spaceXY(SPACE_PLACES[fromKey].p, cx, cy, Rm, k);
-        const [tx, ty] = spaceXY(SPACE_PLACES[toKey].p, cx, cy, Rm, k);
+        const [fx, fy] = placeXY(fromKey, cx, cy, Rm, k);
+        const [tx, ty] = placeXY(toKey, cx, cy, Rm, k);
         const on = te > 1.2 && te < 4;
         if (on) {
           const f = clamp((te - 1.2) / 0.5, 0, 1);
@@ -356,8 +532,7 @@
     }
 
     if (e.kind === "drop") {
-      const src = SPACE_PLACES[e.place];
-      const [sx, sy] = spaceXY(src.p, cx, cy, Rm, k);
+      const [sx, sy] = placeXY(e.place, cx, cy, Rm, k);
       const p = project(e.earth[0], e.earth[1], camLat, camLon);
       const fall = clamp(te / 2.6, 0, 1);
       if (te < 3.2) {
@@ -411,13 +586,16 @@
     }
   }
 
+
   let last = performance.now();
   function loop(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     frame(dt);
     requestAnimationFrame(loop);
   }
-  go(0);
+  const fromHash = () => { const id = location.hash.replace("#", ""); return WORLDS.some((w) => w.id === id) ? id : "uc"; };
+  window.addEventListener("hashchange", () => { if (!world || world.id !== fromHash()) setWorld(fromHash()); });
+  setWorld(fromHash());
   updatePlay();
   requestAnimationFrame(loop);
 })();

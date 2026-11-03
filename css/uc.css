@@ -55,3 +55,19 @@
   .top-links a { padding: 5px 9px; font-size: 12px; }
   .brand-sub { display: none; }
 }
+
+.world-tabs { display: grid; gap: 10px; margin: 0 0 18px; }
+.tab-group { display: grid; grid-template-columns: 130px 1fr; gap: 10px; align-items: start; }
+.tab-group-l { font-size: 12px; font-weight: 700; color: var(--muted); padding-top: 7px; letter-spacing: .04em; }
+.tab-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.world-tab {
+  padding: 5px 12px; border-radius: 99px; font-size: 13px; cursor: pointer;
+  background: transparent; border: 1px solid var(--line); color: var(--muted);
+}
+.world-tab:hover { color: var(--text); border-color: var(--accent); }
+.world-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.world-tab[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
+.world-head { margin: 0 0 14px; }
+.world-head h2 { margin: 0 0 4px; font-size: 20px; }
+.world-head p { margin: 0; color: #c9d3ef; font-size: 14px; max-width: 80ch; }
+@media (max-width: 640px) { .tab-group { grid-template-columns: 1fr; gap: 4px; } }
