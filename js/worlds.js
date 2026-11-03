@@ -665,5 +665,33 @@
     ],
   });
 
+
+  /* ------------------------------------------------------------------ */
+  /* トップをねらえ！ */
+  worlds.push({
+    id: "gunbuster", series: "more", era: "トップをねらえ！（21世紀〜約1万2千年後）", short: "トップをねらえ！",
+    intro: "庵野秀明の初監督作品『トップをねらえ！』（1988, OVA全6話）。人類を襲う巨大な宇宙怪獣と戦うため、宇宙パイロットを目指す少女タカヤ・ノリコの物語。光速に近い宇宙船で戦うたびに、地球では何年もの時間が流れていく“ウラシマ効果”が物語の大きな軸になっている。",
+    map: "galaxy", galaxy: "plain", centerLabel: "",
+    fleet: ["#c8d8ff", "#ff9a6b"],
+    works: {
+      top: { name: "トップをねらえ！（1988）", color: "#ff6b6b" },
+      top2: { name: "トップをねらえ2！（2004）", color: "#7fd0ff" },
+    },
+    places: {
+      solar: planet([0.55, 0.2], "太陽系（地球・木星）", "#4f9bff"),
+      outer: planet([0.38, 0.1], "太陽系の外", "#c8c0b8"),
+      center: { p: [0, 0], name: "銀河中心（宇宙怪獣の巣）", type: "fortress" },
+    },
+    events: [
+      { date: "物語の前", work: "top", kind: "space", place: "outer", fx: "battle", title: "ルクシオン艦隊と宇宙怪獣", text: "人類の宇宙艦隊が宇宙怪獣と遭遇し、壊滅的な打撃を受ける。旗艦ルクシオンの艦長だったノリコの父も帰らなかった。人類は宇宙怪獣との全面戦争に備え始める。" },
+      { date: "第1〜2話", work: "top", kind: "space", place: "solar", title: "沖縄の宇宙高校と“お姉さま”", text: "ノリコは父の夢を継ぎ、沖縄女子宇宙高校で人型の宇宙戦闘マシンのパイロットを目指す。落ちこぼれだったが、コーチの“鬼コーチ”オオタと、憧れの“お姉さま”アマノ・カズミに支えられ、宇宙へ旅立つ。" },
+      { date: "第3〜4話", work: "top", kind: "space", place: "outer", fx: "battle", route: ["solar", "outer"], routeColor: "#ffd27a", title: "光速での戦いとウラシマ効果", text: "光速に近い宇宙船で戦うノリコたちには数か月しか経っていないのに、地球に戻ると何年も過ぎている。同級生は大人になり、ノリコは時間に取り残されていく。" },
+      { date: "第5話", work: "top", kind: "space", place: "solar", fx: "battle", title: "ガンバスター出撃", text: "ノリコとカズミが乗る超巨大な合体ロボット「ガンバスター」が完成。太陽系に迫る宇宙怪獣の大群を迎え撃つ。" },
+      { date: "第6話", work: "top", kind: "space", place: "center", fx: "nuke", route: ["solar", "center"], routeColor: "#ff9a6b", title: "ブラックホール爆弾", text: "人類は木星を圧縮して作った超巨大爆弾を銀河中心へ運び、宇宙怪獣の巣ごとブラックホールに変えて消し去る作戦に出る。ノリコとカズミは爆弾を起爆させ、ガンバスターで脱出する。" },
+      { date: "約1万2千年後", work: "top", kind: "space", place: "solar", fx: "flash", route: ["center", "solar"], routeColor: "#ffd27a", title: "おかえりなさい", text: "時間の遅れのため、二人が地球に戻ったのは約1万2千年後だった。夜の地球の街の明かりが「オカエリナサイ」の文字をかたち作って、二人を迎える。" },
+      { date: "約1万2千年後", work: "top2", kind: "space", place: "solar", fx: "battle", title: "トップをねらえ2！", text: "はるか未来の地球。宇宙怪獣と戦う力を持つ少年少女“トップレス”の時代に、宇宙パイロットに憧れる少女ノノが現れる。物語は、帰還したノリコとカズミの物語へとつながっていく。" },
+    ],
+  });
+
   window.TIMELINE_WORLDS = worlds;
 })();

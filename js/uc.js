@@ -658,7 +658,7 @@
     ctx.fillStyle = core; ctx.fillRect(0, 0, W, H);
     for (const p of SWG.pts) { ctx.globalAlpha = p.b; ctx.fillStyle = "#e8ecff"; ctx.fillRect(X(p.x), Y(p.y), p.s, p.s); }
     ctx.globalAlpha = 1;
-    text(world.centerLabel || "銀河中心", X(0), Y(0) + 4, { s: 10, a: "center", c: "rgba(255,230,200,0.6)", shadow: false });
+    text(world.centerLabel ?? "銀河中心", X(0), Y(0) + 4, { s: 10, a: "center", c: "rgba(255,230,200,0.6)", shadow: false });
     // 勢力の色・別の銀河・地域名（作品ごとの追加）
     for (const tn of world.tints || []) {
       const g = ctx.createRadialGradient(X(tn.p[0]), Y(tn.p[1]), 0, X(tn.p[0]), Y(tn.p[1]), tn.r * S);
