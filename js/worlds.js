@@ -837,5 +837,41 @@
     ],
   });
 
+
+  /* ------------------------------------------------------------------ */
+  /* マブラヴ オルタナティヴ */
+  worlds.push({
+    id: "muvluv", series: "more", era: "マブラヴ オルタナティヴ（1958〜2002年）", short: "マブラヴ オルタナティヴ",
+    intro: "âge のビジュアルノベル『マブラヴ オルタナティヴ』（2006）。地球外起源の生命体“BETA”によって人類が滅亡の瀬戸際に追い詰められた並行世界。人型兵器“戦術機”で戦う人類と、BETAとの対話や殲滅を目指す極秘の「オルタネイティヴ計画」を描く。BETAの巣は“ハイヴ”と呼ばれる。",
+    map: "earthmoon", noLagrange: true, earthZoom: 1.5,
+    works: {
+      pre: { name: "BETA大戦の歴史", color: "#9aa8cc" },
+      alt: { name: "マブラヴ オルタナティヴ（2001年）", color: "#ff6b6b" },
+    },
+    places: {
+      mars: far(1.6, -0.9, "火星（遠方・縮尺外）", "#e0673c", 12),
+      sacrobosco: { p: [1.05, -0.05], name: "月・サクロボスコ", type: "base" },
+    },
+    events: [
+      { date: "1958年", work: "pre", kind: "space", place: "mars", title: "火星で生命体を発見", text: "火星探査機が、火星の地表で活動する異星の生命体を捉える。人類が初めて地球外生命の存在を知った出来事だった。" },
+      { date: "1967年", work: "pre", kind: "space", place: "sacrobosco", fx: "battle", title: "月面での遭遇と月面戦争", text: "月面の調査中、人類はサクロボスコで異星起源の生命体と遭遇し、攻撃を受ける。この生命体は「人類に敵対的な地球外起源種（BETA）」と名付けられ、月面での戦いが始まる。人類は最終的に月から撤退する。" },
+      { date: "1960年代〜", work: "pre", kind: "earth", earth: [40.7, -74.0], placeName: "国連", fx: "flash", title: "オルタネイティヴ計画", text: "BETAとの意思疎通や対抗手段を探る国連の極秘計画。第1〜第3計画では、BETAの情報を得るための研究が段階的に進められる。" },
+      { date: "1973年", work: "pre", kind: "drop", place: "earthorbit", earth: [39.5, 76.0], placeName: "中国・新疆ウイグル・カシュガル", rock: true, title: "カシュガルへの落着", text: "BETAの着陸ユニットが中国のカシュガルに落着する。ここに建設された“オリジナルハイヴ”（甲1号目標）を起点に、BETAはユーラシア大陸を西と東へ侵攻していく。" },
+      { date: "1973年〜", work: "pre", kind: "earth", earth: [42, 80], placeName: "ユーラシア大陸", fx: "redsea", title: "ユーラシアの陥落", text: "BETAの物量の前に、中国・ソ連・中東・ヨーロッパの各地が次々に失われる。人類は人型の兵器“戦術機”を開発して抵抗するが、ユーラシアの大半にハイヴが築かれていく。" },
+      { date: "1978年", work: "pre", kind: "earth", earth: [53.9, 27.6], placeName: "ベラルーシ・ミンスク", fx: "battle", title: "パレオロゴス作戦", text: "NATOとワルシャワ条約機構の軍が共同でミンスクのハイヴ攻略に挑む大規模作戦。ハイヴ内部に到達した部隊もあったが、人類側は大きな損害を受ける。" },
+      { date: "1998年", work: "pre", kind: "earth", earth: [33.6, 130.4], placeName: "日本・九州", fx: "battle", title: "BETAの日本上陸", text: "ユーラシアからBETAが日本に上陸し、西日本は壊滅的な被害を受ける。" },
+      { date: "1998年", work: "pre", kind: "earth", earth: [35.0, 135.8], placeName: "京都", fx: "nuke", title: "京都の陥落", text: "BETAの侵攻で帝都・京都が失われ、日本は東へ追い詰められる。" },
+      { date: "1998年", work: "pre", kind: "earth", earth: [35.45, 139.64], placeName: "横浜", fx: "redsea", title: "横浜ハイヴの建設", text: "BETAは日本本土にもハイヴを築く。横浜ハイヴの存在は、日本と国連にとって大きな脅威になる。" },
+      { date: "1999年", work: "pre", kind: "earth", earth: [35.45, 139.64], placeName: "横浜", fx: "nuke", title: "明星作戦とG弾", text: "国連軍と日本・アメリカの共同作戦で横浜ハイヴを攻略。この作戦でアメリカは新型兵器G弾を予告なしに投下し、ハイヴは消滅するが、周辺の土地は重力異常によって荒廃する。跡地には国連軍横浜基地が建設される。" },
+      { date: "2001年10月22日", work: "alt", kind: "earth", earth: [35.45, 139.64], placeName: "国連軍横浜基地", fx: "flash", title: "白銀武、この世界へ", text: "平和な世界から“BETAのいる世界”に再びやって来た白銀武が、横浜基地で香月夕呼の進める「オルタネイティヴ4」に関わり、衛士（戦術機のパイロット）として訓練を受ける。" },
+      { date: "2001年11月11日", work: "alt", kind: "earth", earth: [37.9, 139.0], placeName: "新潟", fx: "battle", title: "新潟へのBETA上陸", text: "佐渡島ハイヴから出たBETAの群れが新潟に上陸する。" },
+      { date: "2001年12月5日", work: "alt", kind: "earth", earth: [35.69, 139.69], placeName: "帝都・東京", fx: "battle", title: "12・5事件（クーデター）", text: "日本帝国軍の一部が、政府の方針に反発してクーデターを起こす。国連軍と帝国軍の戦術機部隊が帝都で対峙する。" },
+      { date: "2001年12月", work: "alt", kind: "earth", earth: [38.0, 138.4], placeName: "佐渡島", fx: "nuke", title: "甲21号作戦（佐渡島ハイヴ攻略）", text: "オルタネイティヴ4の成果を試す佐渡島ハイヴの攻略作戦。新兵器“凄乃皇（すさのお）”が投入されるが、多くの犠牲を払う。" },
+      { date: "2001年12月29日", work: "alt", kind: "earth", earth: [35.45, 139.64], placeName: "国連軍横浜基地", fx: "battle", title: "横浜基地防衛戦", text: "BETAの大群が横浜基地を直接襲撃する。基地は深刻な被害を受け、多くの仲間が倒れる。" },
+      { date: "2001年12月31日〜", work: "alt", kind: "earth", earth: [39.5, 76.0], placeName: "カシュガル（オリジナルハイヴ）", fx: "battle", title: "桜花作戦", text: "人類の総力を挙げたオリジナルハイヴ（甲1号目標）への最終攻撃。武たちA-01部隊は凄乃皇四型とともにハイヴの最深部へ突入し、BETAの中枢「あ号標的」を撃破する。" },
+      { date: "2002年", work: "alt", kind: "earth", earth: [35.45, 139.64], placeName: "横浜", fx: "flash", title: "その後", text: "オリジナルハイヴは陥落したが、地球と月にはなお多くのハイヴが残る。武はこの世界を去り、人類の戦いは続いていく。" },
+    ],
+  });
+
   window.TIMELINE_WORLDS = worlds;
 })();
