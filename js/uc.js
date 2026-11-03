@@ -51,7 +51,7 @@
   })();
 
   /* ---------- 地球のレンダリング（正射図法） ---------- */
-  const GS = 360;
+  const GS = 480;
   const globeCanvas = document.createElement("canvas");
   globeCanvas.width = GS; globeCanvas.height = GS;
   const gctx = globeCanvas.getContext("2d");
@@ -137,7 +137,7 @@
 
   // 世界の切り替えタブ
   const tabs = $("#worldTabs");
-  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説", sw: "スター・ウォーズ" };
+  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説", sw: "スター・ウォーズ", eva: "エヴァンゲリオン" };
   for (const [sid, sname] of Object.entries(SERIES)) {
     const grp = document.createElement("div");
     grp.className = "tab-group";
@@ -344,13 +344,13 @@
     const Rm = Math.min(W * 0.34, H * 0.4);
     const k = 1 + z * 7;
     const spaceA = clamp(1 - z * 1.4, 0, 1);
-    const rE = lerp(Math.max(12, Rm * 0.085), Math.min(W, H) * 0.42, z);
+    const rE = lerp(Math.max(12, Rm * 0.085), Math.min(W, H) * 0.42 * (world.earthZoom || 1), z);
 
     if (spaceA > 0.01) {
       ctx.globalAlpha = spaceA;
       ctx.strokeStyle = "rgba(150,170,220,0.25)"; ctx.setLineDash([3, 6]); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(cx, cy, Rm * k, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-      LPOS.forEach(([p, side], i) => {
+      if (!world.noLagrange) LPOS.forEach(([p, side], i) => {
         const [x, y] = spaceXY(p, cx, cy, Rm, k);
         ctx.strokeStyle = "rgba(160,190,255,0.35)"; ctx.beginPath(); ctx.arc(x, y, 14, 0, TAU); ctx.stroke();
         text((world.lp || [])[i] || `L${i + 1}`, x, y + side * 26 + (side > 0 ? 4 : 0), { s: 10, c: "rgba(170,195,255,0.8)", a: "center" });
@@ -732,7 +732,7 @@
           glow(X, Y, 10 + f * rE * 0.6, "rgba(255,255,220,1)", 1 - f);
           ctx.strokeStyle = `rgba(255,170,90,${1 - f * 0.7})`; ctx.lineWidth = 2;
           ctx.beginPath(); ctx.arc(X, Y, 6 + f * rE * 0.35, 0, TAU); ctx.stroke();
-          ctx.fillStyle = "rgba(40,20,10,0.75)"; ctx.beginPath(); ctx.arc(X, Y, 5 + f * 6, 0, TAU); ctx.fill();
+          if (!e.caught) { ctx.fillStyle = "rgba(40,20,10,0.75)"; ctx.beginPath(); ctx.arc(X, Y, 5 + f * 6, 0, TAU); ctx.fill(); }
         }
       }
     }
@@ -747,6 +747,21 @@
           ctx.beginPath(); ctx.arc(X, Y, 6 + pulse * 26, 0, TAU); ctx.stroke();
           if (e.fx === "battle") for (let i = 0; i < 6; i++) if (Math.sin(t * 8 + i * 1.7) > 0.5) glow(X + Math.cos(i * 2.1) * 14, Y + Math.sin(i * 2.1) * 10, 8, "rgba(255,200,120,0.9)");
           if (e.fx === "nuke" && te > 1.5) { const f = clamp((te - 1.5) / 2.5, 0, 1); glow(X, Y, 10 + f * 70, "rgba(255,255,230,1)", 1 - f); }
+          if (e.fx === "cross" && te > 1) {
+            // 十字の光柱
+            const f = clamp((te - 1) / 3, 0, 1), a = 1 - Math.max(0, (te - 4) / 2);
+            const L = 20 + f * rE * 0.5, Wd = 3 + f * 6;
+            ctx.globalAlpha = clamp(a, 0, 1);
+            glow(X, Y, L * 0.8, e.crossColor || "rgba(255,160,90,0.9)");
+            ctx.fillStyle = "rgba(255,240,220,0.95)";
+            ctx.fillRect(X - Wd / 2, Y - L, Wd, L * 1.35);
+            ctx.fillRect(X - L * 0.45, Y - L * 0.62, L * 0.9, Wd);
+            ctx.globalAlpha = 1;
+          }
+          if (e.fx === "redsea") {
+            const f = clamp((te - 0.5) / 3, 0, 1);
+            glow(X, Y, 10 + f * rE * 0.9, "rgba(200,20,40,0.85)", 0.75);
+          }
           ctx.fillStyle = "#ffe9a8"; ctx.beginPath(); ctx.arc(X, Y, 4, 0, TAU); ctx.fill();
         }
         text(e.placeName, X + 12, Y - 10, { s: 13, w: 800, c: "#fff" });

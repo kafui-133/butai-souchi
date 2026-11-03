@@ -366,5 +366,72 @@
     ],
   });
 
+
+  /* ------------------------------------------------------------------ */
+  const TOKYO3 = [35.23, 139.06]; // 箱根（第3新東京市のモデル）
+  worlds.push({
+    id: "eva", series: "eva", era: "新世紀エヴァンゲリオン（TV版・旧劇場版）", short: "TV版・旧劇場版",
+    intro: "庵野秀明監督『新世紀エヴァンゲリオン』（1995〜1996）と『新世紀エヴァンゲリオン劇場版 Air/まごころを、君に』（1997）。2000年のセカンドインパクトで人類の半数が失われた世界で、2015年、第3新東京市に“使徒”が襲来する。地球の出来事は地球に寄って表示する。",
+    map: "earthmoon", noLagrange: true, earthZoom: 1.9,
+    works: {
+      pre: { name: "前史", color: "#9aa8cc" },
+      tv: { name: "新世紀エヴァンゲリオン（TV）", color: "#9b6bff" },
+      eoe: { name: "旧劇場版 Air/まごころを、君に", color: "#ff5f5f" },
+    },
+    places: {},
+    events: [
+      { date: "2000年9月13日", work: "pre", kind: "earth", earth: [-80, 20], placeName: "南極", fx: "cross", crossColor: "rgba(255,255,255,0.9)", title: "セカンドインパクト", text: "南極で巨大な爆発が起き、南極の氷が溶けて海面が上昇、地軸もずれる。続く混乱と紛争で人類の半数が失われた。表向きは大質量隕石の落下とされたが、実際は南極で発見された“第1使徒アダム”に対する接触実験が原因だった。葛城調査隊の唯一の生存者が、少女時代のミサトである。" },
+      { date: "2004年", work: "pre", kind: "earth", earth: TOKYO3, placeName: "ゲヒルン（箱根の地下・ジオフロント）", fx: "flash", title: "碇ユイの消失", text: "人工進化研究所（ゲヒルン）で行われたエヴァンゲリオン初号機の起動実験で、碇ゲンドウの妻ユイが初号機に取り込まれて消える。幼いシンジはその様子を見ていた。" },
+      { date: "2010年", work: "pre", kind: "earth", earth: TOKYO3, placeName: "第3新東京市・ジオフロント", title: "ゲヒルン解体と特務機関NERVの発足", text: "ゲヒルンは解体され、使徒迎撃のための国連直属の特務機関NERVが発足。スーパーコンピュータMAGIを開発した赤木ナオコ博士が死亡する。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: TOKYO3, placeName: "第3新東京市", fx: "battle", title: "第3使徒サキエル襲来", text: "15年ぶりに使徒が現れる。父ゲンドウに呼び出された14歳の碇シンジは、エヴァンゲリオン初号機に乗ることを強いられる。暴走した初号機が使徒を倒す。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: TOKYO3, placeName: "第3新東京市", fx: "battle", title: "第4使徒シャムシエル", text: "鞭のような腕をもつ使徒との戦い。シンジは戦闘に巻き込まれた同級生のトウジとケンスケをエントリープラグに乗せて戦う。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: [35.24, 139.04], placeName: "二子山（箱根）", fx: "beam", title: "第5使徒ラミエルとヤシマ作戦", text: "強力な加粒子砲で近づくものを撃ち抜く正八面体の使徒。日本中の電力を集めて陽電子砲で狙撃する「ヤシマ作戦」が行われ、零号機の綾波レイが盾となってシンジを守る。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: [25, 135], placeName: "太平洋上（国連海軍の艦隊）", fx: "battle", title: "第6使徒ガギエルとアスカの来日", text: "ドイツから弐号機を運ぶ国連海軍の太平洋艦隊が、海中の使徒に襲われる。セカンドチルドレンの惣流・アスカ・ラングレーが、シンジを同乗させて弐号機で撃破する。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: TOKYO3, placeName: "第3新東京市", fx: "battle", title: "第7使徒イスラフェル", text: "二体に分裂する使徒。シンジとアスカは息の合った同時攻撃のため、音楽に合わせた共同生活と特訓を行う。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: [36.4, 138.52], placeName: "浅間山の火口", fx: "battle", title: "第8使徒サンダルフォン", text: "浅間山の火口のマグマの中で、サナギの状態の使徒が見つかる。弐号機が耐熱装備でマグマに潜って捕獲を試みる。" },
+      { date: "2015年", work: "tv", kind: "drop", place: "earthorbit", earth: TOKYO3, placeName: "第3新東京市", caught: true, rock: true, title: "第10使徒サハクィエル", text: "衛星軌道上から自らを落下させて、第3新東京市に体当たりしようとする使徒。エヴァ3機が落下地点を予測して走り、手で受け止めて殲滅する。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: TOKYO3, placeName: "NERV本部（MAGI）", fx: "flash", title: "第11使徒イロウル", text: "微生物サイズの群体の使徒がNERV本部に侵入し、スーパーコンピュータMAGIをハッキングして自爆させようとする。赤木リツコが逆にプログラムで撃退する。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: [36.56, 138.19], placeName: "松代（第2実験場）", fx: "battle", title: "第13使徒バルディエルとエヴァ参号機", text: "アメリカから運ばれたエヴァ参号機の松代での起動実験中、参号機が使徒に乗っ取られる。パイロットはトウジだった。シンジが戦いを拒む中、初号機はダミーシステムで参号機を引き裂く。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: [39.3, -116.5], placeName: "アメリカ・ネバダ（NERV第2支部）", fx: "nuke", title: "NERV第2支部の消滅", text: "永久機関S²機関を搭載したエヴァ四号機の起動実験中、第2支部は施設ごと消滅する。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: TOKYO3, placeName: "第3新東京市・ジオフロント", fx: "battle", title: "第14使徒ゼルエルと初号機の覚醒", text: "最強の使徒がジオフロントに侵入し、零号機と弐号機を圧倒する。エネルギーの切れた初号機が暴走して使徒を捕食し、S²機関を取り込む。" },
+      { date: "2015年", work: "tv", kind: "space", place: "moon", fx: "beam", from: "earthorbit", to: "moon", title: "第15使徒アラエルとロンギヌスの槍", text: "衛星軌道上の使徒が光でアスカの心を侵す。零号機がロンギヌスの槍を投げて使徒を倒し、槍はそのまま月の軌道まで飛んでいく。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: TOKYO3, placeName: "第3新東京市", fx: "nuke", title: "第16使徒アルミサエルとレイの自爆", text: "零号機に侵食・融合しようとする使徒を道連れに、レイは零号機を自爆させ、第3新東京市に巨大なクレーターが残る。レイは“3人目”として再び現れる。" },
+      { date: "2015年", work: "tv", kind: "earth", earth: TOKYO3, placeName: "NERV本部・ターミナルドグマ", fx: "flash", title: "第17使徒タブリス（渚カヲル）", text: "フィフスチルドレンとして現れた少年・渚カヲルは、最後の使徒だった。弐号機を操ってターミナルドグマへ降りたカヲルを、シンジは初号機の手で握りつぶす。" },
+      { date: "2015年", work: "eoe", kind: "earth", earth: TOKYO3, placeName: "NERV本部", fx: "battle", title: "戦略自衛隊のNERV本部侵攻", text: "人類補完計画を進める秘密組織ゼーレは、NERV本部の制圧を命じる。戦略自衛隊が本部を襲撃し、弐号機のアスカはエヴァ量産機9体と戦う。" },
+      { date: "2015年", work: "eoe", kind: "earth", earth: TOKYO3, placeName: "第3新東京市（地球全体へ）", fx: "redsea", title: "サードインパクトと人類補完計画", text: "量産機によって初号機が依り代とされ、巨大化したリリス（レイ）のもとで全人類の心の壁（ATフィールド）が溶けて一つになる。その中でシンジは、他者のいる世界をもう一度選ぶ。" },
+    ],
+  });
+
+  /* ------------------------------------------------------------------ */
+  worlds.push({
+    id: "evarebuild", series: "eva", era: "ヱヴァンゲリヲン新劇場版（序・破・Q・シン）", short: "新劇場版",
+    intro: "『ヱヴァンゲリヲン新劇場版：序』（2007）から『シン・エヴァンゲリオン劇場版』（2021）までの4部作。TV版をなぞる序から、破で大きく展開が変わり、Qでは14年後の世界、シンで物語が完結する。使徒の番号はTV版と異なる。",
+    map: "earthmoon", noLagrange: true, earthZoom: 1.9,
+    works: {
+      jo: { name: "序（2007）", color: "#9b6bff" },
+      ha: { name: "破（2009）", color: "#ff7a5f" },
+      q: { name: "Q（2012）", color: "#4fd1ff" },
+      shin: { name: "シン・エヴァンゲリオン（2021）", color: "#ff5fa8" },
+    },
+    places: { tabgha: { p: [1.05, -0.04], name: "月・タブハベース", type: "base" } },
+    events: [
+      { date: "序", work: "jo", kind: "earth", earth: TOKYO3, placeName: "第3新東京市", fx: "battle", title: "第4の使徒の襲来", text: "シンジは父に呼ばれて第3新東京市を訪れ、初号機に乗って使徒と戦う。" },
+      { date: "序", work: "jo", kind: "earth", earth: [35.24, 139.04], placeName: "二子山（箱根）", fx: "beam", title: "第6の使徒とヤシマ作戦", text: "変形しながら加粒子砲を放つ正八面体の使徒に対し、日本中の電力を集めた陽電子砲で狙撃する。" },
+      { date: "序", work: "jo", kind: "space", place: "tabgha", title: "月の渚カヲル", text: "月面で目覚めた渚カヲルが「また3番目とはね」とつぶやく。" },
+      { date: "破", work: "ha", kind: "earth", earth: [75, -40], placeName: "北極・ベタニアベース", fx: "battle", title: "第3の使徒と真希波・マリ", text: "北極のNERV基地で、封印されていた第3の使徒が逃げ出す。新キャラクター真希波・マリ・イラストリアスがエヴァ5号機で撃破する。" },
+      { date: "破", work: "ha", kind: "drop", place: "earthorbit", earth: TOKYO3, placeName: "第3新東京市", caught: true, rock: true, title: "第8の使徒（衛星軌道からの落下）", text: "衛星軌道から落下してくる使徒を、初号機・零号機・弐号機の3機で受け止めて倒す。" },
+      { date: "破", work: "ha", kind: "earth", earth: [36.56, 138.19], placeName: "松代", fx: "battle", title: "第9の使徒とエヴァ3号機", text: "3号機の起動実験中に使徒が寄生する。パイロットは式波・アスカ・ラングレーだった。初号機はダミーシステムで3号機を破壊する。" },
+      { date: "破", work: "ha", kind: "earth", earth: TOKYO3, placeName: "第3新東京市・ジオフロント", fx: "cross", crossColor: "rgba(255,90,90,0.9)", title: "第10の使徒とニア・サードインパクト", text: "零号機ごとレイを取り込んだ使徒に対し、シンジの初号機が覚醒してレイを救い出す。初号機は人のかたちを超え始め、サードインパクトが起きかける。" },
+      { date: "破", work: "ha", kind: "drop", place: "tabgha", earth: TOKYO3, placeName: "第3新東京市", caught: true, rock: true, title: "カヲルの槍", text: "月から降下してきたエヴァ Mark.06 の渚カヲルが槍を投げ、覚醒した初号機を止める。" },
+      { date: "Q（破の14年後）", work: "q", kind: "space", place: "earthorbit", fx: "battle", title: "初号機の回収（US作戦）", text: "反NERV組織ヴィレが、衛星軌道上に封印されていた初号機を回収する。目覚めたシンジは、自分が14年眠っていたこと、そしてニア・サードインパクトの結果を知る。" },
+      { date: "Q", work: "q", kind: "earth", earth: TOKYO3, placeName: "NERV本部跡・セントラルドグマ", fx: "cross", crossColor: "rgba(255,80,80,0.9)", title: "フォースインパクトの発動", text: "槍を抜けば世界をやり直せると信じたシンジは、カヲルとともに13号機に乗り込むが、それがフォースインパクトの引き金となる。カヲルは身を挺してそれを止め、命を落とす。" },
+      { date: "シン", work: "shin", kind: "earth", earth: [48.86, 2.35], placeName: "フランス・パリ", fx: "battle", title: "パリ市街の復元作戦", text: "ヴィレがユーロネルフの拠点だったパリを奪還し、赤く“コア化”した街をもとに戻す作戦を行う。マリの8号機がNERVのエヴァ部隊と戦う。" },
+      { date: "シン", work: "shin", kind: "earth", earth: [35.8, 138.6], placeName: "第3村（日本国内）", title: "第3村での暮らし", text: "心を閉ざしたシンジは、生き延びた人々が暮らす第3村で、大人になったトウジやケンスケと再会し、少しずつ立ち直っていく。" },
+      { date: "シン", work: "shin", kind: "earth", earth: [-80, 20], placeName: "南極（NERV本部の爆心地）", fx: "battle", title: "ヤマト作戦", text: "ヴィレの戦艦ヴンダーが南極のNERV本部に突入し、ゲンドウが進める“アディショナル・インパクト”を止めようとする。" },
+      { date: "シン", work: "shin", kind: "earth", earth: [-80, 20], placeName: "南極・マイナス宇宙", fx: "redsea", title: "アディショナル・インパクトとシンジの選択", text: "マイナス宇宙でシンジは父ゲンドウと向き合い、エヴァのない世界（ネオン・ジェネシス）を選ぶ。" },
+      { date: "シン", work: "shin", kind: "earth", earth: [33.95, 131.25], placeName: "山口県・宇部新川駅", title: "エヴァのない世界へ", text: "大人になったシンジとマリが、駅から街へと駆け出していく。" },
+    ],
+  });
+
   window.TIMELINE_WORLDS = worlds;
 })();
