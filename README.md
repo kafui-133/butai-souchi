@@ -63,6 +63,12 @@ SF作品の歴史を、舞台となる宇宙の地図の上でアニメーショ
 
 年表データは `js/uc-data.js`（宇宙世紀）と `js/worlds.js`（各作品の世界）にあります。年表ページ右上の検索欄で、全作品の出来事を人物・場所・用語で検索できます。URLの末尾に `#logh` や `#ce` を付けると、その作品の年表を直接開けます（非公式のファン向け解説）。
 
+## 公開（GitHub Pages）
+
+`main` ブランチに push すると、`.github/workflows/pages.yml` が自動でサイトを GitHub Pages に公開します。
+初回のみ、リポジトリの **Settings → Pages → Build and deployment → Source** を **GitHub Actions** に設定してください。
+公開URL：https://kafui-133.github.io/butai-souchi/
+
 ## 起動方法
 
 ```bash
