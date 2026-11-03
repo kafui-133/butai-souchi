@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>舞台装置 — SF概念図鑑</title>
+  <meta name="description" content="SFに登場する概念やマクガフィンを、アニメーション・出典・数式・現在の実現可能性とともに解説するインタラクティブ図鑑。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script defer src="vendor/katex/katex.min.js"></script>
+  <script defer src="js/data.js"></script>
+  <script defer src="js/animations.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <button class="menu-btn" id="menuBtn" aria-label="目次を開く">☰</button>
+    <a class="brand" href="#">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>
+        <span class="brand-title">舞台装置</span>
+        <span class="brand-sub">BUTAI-SOUCHI ／ SF概念図鑑</span>
+      </span>
+    </a>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" id="sidebar" aria-label="概念一覧">
+      <input type="search" id="search" class="search" placeholder="概念・作品名で検索…" autocomplete="off">
+      <ul id="navList" class="nav-list"></ul>
+      <div class="legend">
+        <div class="legend-title">実現可能性の目盛り</div>
+        <ul id="legendList"></ul>
+      </div>
+    </nav>
+
+    <main id="main" class="main" tabindex="-1"></main>
+  </div>
+
+  <noscript><p class="noscript">このアプリの表示にはJavaScriptが必要です。</p></noscript>
+</body>
+</html>
