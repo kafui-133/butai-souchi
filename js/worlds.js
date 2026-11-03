@@ -433,5 +433,75 @@
     ],
   });
 
+
+  /* ------------------------------------------------------------------ */
+  const ATARIA = [15, 142];
+  const MACWORKS = {
+    zero: { name: "マクロス ゼロ", color: "#7fc8ff" },
+    sdf: { name: "超時空要塞マクロス", color: "#ff6b6b" },
+    plus: { name: "マクロスプラス", color: "#6dd3ff" },
+    m7: { name: "マクロス7", color: "#ffb347" },
+    frontier: { name: "マクロスF", color: "#7dff9c" },
+    delta: { name: "マクロスΔ", color: "#ff8fd0" },
+    proto: { name: "前史", color: "#9aa8cc" },
+  };
+  worlds.push({
+    id: "macross", series: "macross", era: "マクロス：地球圏の時代（1999〜2040年）", short: "地球圏",
+    intro: "『超時空要塞マクロス』（1982）に始まるシリーズの前半。1999年、異星人の巨大宇宙船が地球に墜落したことから、人類は統合政府を作り、巨人族ゼントラーディとの星間戦争を“歌”で終わらせる。可変戦闘機バルキリーと歌姫がシリーズを通した主役。",
+    map: "earthmoon", noLagrange: true,
+    works: MACWORKS,
+    places: {
+      pluto: far(-1.6, -0.9, "冥王星軌道（遠方・縮尺外）", "#c8c0b8", 8),
+      mars: far(1.6, -0.9, "火星・サラ基地（遠方・縮尺外）", "#e0673c", 12),
+      zentfleet: { p: [0.45, -0.35], name: "ボドルザー基幹艦隊", type: "rock" },
+    },
+    events: [
+      { date: "1999年7月", work: "sdf", kind: "drop", place: "earthorbit", earth: ATARIA, placeName: "南アタリア島（太平洋の架空の島）", title: "異星の巨大宇宙船の墜落", text: "全長1,200 mを超える異星人の宇宙戦艦が、南太平洋の南アタリア島に墜落する。人類は宇宙に自分たち以外の知的生命がいることを知り、その超技術（オーバーテクノロジー）の解析が始まる。" },
+      { date: "1999〜2001年", work: "sdf", kind: "earth", earth: [35, 10], placeName: "地球各地", fx: "battle", title: "統合戦争", text: "異星人の脅威に備えて地球統合政府を作ろうとする勢力と、それに反対する勢力の間で世界規模の戦争が起きる。統合政府側が勝利する。" },
+      { date: "2008年", work: "zero", kind: "earth", earth: [-12, 168], placeName: "南太平洋・マヤン島（架空の島）", fx: "song", title: "マヤン島の戦い（マクロス ゼロ）", text: "統合戦争の末期、古い歌と伝承が残るマヤン島で、統合軍と反統合同盟の可変戦闘機が戦う。島に眠るプロトカルチャーの遺産“鳥の人”が目覚める。" },
+      { date: "2009年2月", work: "sdf", kind: "earth", earth: ATARIA, placeName: "南アタリア島", fx: "battle", title: "マクロス進宙式とゼントラーディの襲来", text: "修復された宇宙戦艦は「SDF-1 マクロス」として進宙式を迎えるが、その日、巨人族ゼントラーディの艦隊が現れる。主砲が勝手に発射され、第一次星間大戦が始まる。" },
+      { date: "2009年", work: "sdf", kind: "space", place: "pluto", fx: "flash", title: "フォールドの失敗と冥王星軌道", text: "マクロスは超光速航法フォールドで月の裏側へ逃れようとするが、島の住民ごと冥王星の軌道まで飛ばされてしまう。艦内に街を作り、民間人を乗せたまま、地球への長い帰還の旅が始まる。" },
+      { date: "2009年", work: "sdf", kind: "space", place: "mars", fx: "battle", title: "火星のサラ基地", text: "帰還の途中、マクロスは放棄された火星のサラ基地に立ち寄り、ゼントラーディの攻撃を受ける。" },
+      { date: "2009年", work: "sdf", kind: "space", place: "earthorbit", song: true, title: "歌姫リン・ミンメイ", text: "マクロスの艦内の街で、少女リン・ミンメイが歌手としてデビューする。文化を知らないゼントラーディは、歌に強い衝撃を受ける。主人公の一条輝はバルキリーのパイロットとして戦う。" },
+      { date: "2010年", work: "sdf", kind: "earth", earth: [40, -100], placeName: "地球全土", fx: "nuke", title: "ボドルザー基幹艦隊による地球砲撃", text: "ゼントラーディの総司令ボドルザーが率いる約480万隻の基幹艦隊が地球軌道に現れ、地上を一斉に砲撃する。地球の人口の大部分が失われる。" },
+      { date: "2010年", work: "sdf", kind: "space", place: "zentfleet", fx: "song", title: "ミンメイ・アタックと第一次星間大戦の終結", text: "マクロスと、和平を選んだブリタイの艦隊が、ミンメイの歌を戦場全体に流しながらボドルザー艦隊に突入する。歌に混乱した基幹艦隊は崩れ、ボドルザーは倒される。" },
+      { date: "2011年〜", work: "sdf", kind: "earth", earth: [40, -100], placeName: "地球・マクロス・シティ", title: "地球の再建と新統合政府", text: "生き残った人類とゼントラーディは共に暮らし始め、新統合政府のもとで地球の再建と、銀河への大規模な移民計画が進められる。" },
+      { date: "2040年", work: "plus", kind: "earth", earth: [40, -100], placeName: "地球・マクロス・シティ", fx: "song", title: "シャロン・アップル事件（マクロスプラス）", text: "第一次星間大戦の終結30周年を祝う式典で、人工知能のバーチャル・アイドル、シャロン・アップルが暴走し、軍のシステムと旧SDF-1マクロスを乗っ取る。テストパイロットのイサムとガルドが、地球の防衛網を突破して止めに向かう。" },
+    ],
+  });
+
+  worlds.push({
+    id: "macrossgal", series: "macross", era: "マクロス：銀河の移民船団（2040〜2067年）", short: "銀河の移民船団",
+    intro: "第一次星間大戦の後、人類は超長距離移民船団を組んで銀河各地へ旅立った。船団や植民惑星で、未知の生命体と“歌”をめぐる物語が繰り返される。地図は銀河の模式図で、位置関係はおおよそのもの。",
+    map: "galaxy", galaxy: "plain",
+    fleet: ["#ff8a8a", "#8fd0ff"],
+    works: MACWORKS,
+    places: {
+      earth: planet([0.55, 0.22], "地球（太陽系）", "#4f9bff"),
+      eden: planet([0.62, 0.3], "惑星エデン", "#7fd18c"),
+      varauta: planet([-0.42, 0.42], "バロータ3214星系", "#b88ae0"),
+      m7route: { p: [0.1, 0.5], name: "", type: "point" },
+      galaxyfleet: planet([-0.05, 0.25], "マクロス・ギャラクシー船団", "#d8c8ff"),
+      vajra: planet([0.03, -0.05], "バジュラ本星（銀河中心付近）", "#ffb070"),
+      frroute: { p: [0.35, 0.05], name: "", type: "point" },
+      brisingr: { p: [-0.5, -0.4], name: "ブリージンガル球状星団", type: "point" },
+      windermere: planet([-0.55, -0.45], "惑星ウィンダミアⅣ", "#9ad0ff"),
+      ragna: planet([-0.42, -0.33], "惑星ラグナ", "#5ad0d8"),
+      alshahal: planet([-0.6, -0.3], "惑星アル・シャハル", "#e8c27a"),
+      protoruins: planet([0.25, -0.5], "プロトカルチャーの遺跡", "#c8b08a"),
+    },
+    events: [
+      { date: "約50万年前", work: "proto", kind: "space", place: "protoruins", fx: "flash", title: "プロトカルチャーの繁栄と滅亡", text: "銀河に広がっていた古代種族プロトカルチャーは、戦闘用の巨人ゼントラーディを作り出し、地球人類の祖先にも手を加えたとされる。内戦とゼントラーディの暴走によって滅び、遺跡や“歌”の記憶だけが残った。" },
+      { date: "2040年", work: "plus", kind: "space", place: "eden", fx: "battle", title: "惑星エデンの次期主力機競争", text: "植民惑星エデンで、新統合軍の次期主力可変戦闘機を決める「スーパーノヴァ計画」が行われる。YF-19のイサムとYF-21のガルドが激しく競い合う。" },
+      { date: "2045年", work: "m7", kind: "space", place: "varauta", fx: "battle", song: true, route: ["earth", "m7route", "varauta"], routeColor: "#ffb347", title: "マクロス7船団とプロトデビルン", text: "銀河の中心方向を目指す超長距離移民船団マクロス7が、バロータ星系で“スピリチア”を吸い取る敵プロトデビルンと遭遇する。ロックバンド「Fire Bomber」の熱気バサラは、戦場で歌い続けて敵の心に訴えかける。" },
+      { date: "2059年", work: "frontier", kind: "space", place: "frroute", fx: "battle", route: ["earth", "frroute"], routeColor: "#7dff9c", title: "マクロス・フロンティア船団とバジュラ", text: "銀河中心を目指す移民船団マクロス・フロンティアが、昆虫のような宇宙生命体バジュラの襲撃を受ける。少年早乙女アルトは可変戦闘機のパイロットとなり、銀河の妖精シェリル・ノームと、歌手を目指す少女ランカ・リーに出会う。" },
+      { date: "2059年", work: "frontier", kind: "space", place: "galaxyfleet", fx: "flash", title: "ギャラクシー船団の陰謀", text: "シェリルの出身であるマクロス・ギャラクシー船団の一部の幹部が、バジュラを操って銀河を支配しようとしていたことが明らかになる。" },
+      { date: "2059年", work: "frontier", kind: "space", place: "vajra", fx: "battle", song: true, route: ["frroute", "vajra"], routeColor: "#7dff9c", title: "バジュラ本星の決戦", text: "フロンティア船団はバジュラの母星に到達し、最終決戦に臨む。シェリルとランカの歌がバジュラとの意思疎通を可能にし、人類とバジュラは戦いを終える。フロンティアの人々はその星に移り住む。" },
+      { date: "2067年", work: "delta", kind: "space", place: "alshahal", fx: "battle", song: true, title: "アル・シャハルとワルキューレ", text: "ブリージンガル球状星団で、人々を凶暴化させる「ヴァール・シンドローム」が広がる。歌でそれを鎮める戦術音楽ユニット「ワルキューレ」と、少女フレイア・ヴィオンが惑星アル・シャハルで出会う。" },
+      { date: "2067年", work: "delta", kind: "space", place: "ragna", fx: "flash", title: "惑星ラグナのケイオス", text: "ワルキューレとデルタ小隊（可変戦闘機部隊）は、海の惑星ラグナを拠点に活動する。" },
+      { date: "2067年", work: "delta", kind: "space", place: "windermere", fx: "battle", song: true, title: "ウィンダミア王国との戦い", text: "風の歌い手を擁するウィンダミア王国が新統合政府に宣戦し、プロトカルチャーの遺跡の力で星団の支配をもくろむ。ワルキューレの歌と、ウィンダミアの歌がぶつかり合う。" },
+    ],
+  });
+
   window.TIMELINE_WORLDS = worlds;
 })();

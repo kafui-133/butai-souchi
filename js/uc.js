@@ -137,7 +137,7 @@
 
   // 世界の切り替えタブ
   const tabs = $("#worldTabs");
-  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説", sw: "スター・ウォーズ", eva: "エヴァンゲリオン" };
+  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説", sw: "スター・ウォーズ", eva: "エヴァンゲリオン", macross: "マクロス" };
   for (const [sid, sname] of Object.entries(SERIES)) {
     const grp = document.createElement("div");
     grp.className = "tab-group";
@@ -443,7 +443,7 @@
     const S = Math.min(W / 2.3, H / 1.55) * gscale;
     const X = (x) => W / 2 + (x - gcx) * S, Y = (y) => H / 2 + (y - gcy) * S;
 
-    if (world.galaxy === "sw") drawSwBg(X, Y, S); else drawLoghBg(X, Y, S);
+    if (world.galaxy === "sw") drawSwBg(X, Y, S); else if (world.galaxy === "plain") drawPlainBg(X, Y, S); else drawLoghBg(X, Y, S);
 
     // 場所
     for (const [key, p] of Object.entries(PLACES)) {
@@ -515,12 +515,15 @@
           }
           if (Math.sin(t * 3 + f.ph * 7) > 0.97) glow(x, y, 14, "rgba(255,200,120,1)");
         }
+        if (e.song) songFx(cx, cy, 1.4, a);
       } else if (e.fx === "nuke") {
         const f = clamp((te - 1) / 3, 0, 1);
         ctx.fillStyle = "#6a8"; ctx.beginPath(); ctx.arc(cx, cy, 14, 0, TAU); ctx.fill();
         if (te > 1) glow(cx, cy, 14 + f * 60, "rgba(255,255,220,1)", 1 - f);
       } else if (e.fx === "flash") {
         glow(cx, cy, 30 + 6 * Math.sin(t * 4), "rgba(255,230,180,0.9)", 0.6);
+      } else if (e.fx === "song") {
+        songFx(cx, cy, 1.4, a);
       } else if (e.fx === "duel") {
         const sw = Math.sin(t * 3.2), L = 46;
         const cols = e.sabers || ["#4fa8ff", "#ff3b3b"];
@@ -630,6 +633,30 @@
     }
     text("未知領域", X(-0.82), Y(-0.55), { s: 13, w: 800, a: "center", c: "rgba(190,160,230,0.75)" });
   }
+  /* 歌の演出：音の輪と音符 */
+  function songFx(x, y, scale, alpha) {
+    const cols = ["255,120,200", "120,220,255", "255,230,120"];
+    for (let i = 0; i < 4; i++) {
+      const f = ((t * 0.6 + i / 4) % 1);
+      ctx.strokeStyle = `rgba(${cols[i % 3]},${(1 - f) * alpha})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, 8 + f * 70 * scale, 0, TAU); ctx.stroke();
+    }
+    for (let i = 0; i < 6; i++) {
+      const a = i * 1.05 + t * 0.4, r = (20 + ((t * 25 + i * 17) % 60)) * scale;
+      text(i % 2 ? "♪" : "♫", x + Math.cos(a) * r, y + Math.sin(a) * r, { s: 14, a: "center", c: `rgba(${cols[i % 3]},${alpha})`, w: 800 });
+    }
+  }
+  /* 装飾のない銀河（マクロスなど） */
+  function drawPlainBg(X, Y, S) {
+    const W = view.w, H = view.h;
+    ctx.fillStyle = "#03030a"; ctx.fillRect(0, 0, W, H);
+    const core = ctx.createRadialGradient(X(0), Y(0), 0, X(0), Y(0), S * 0.5);
+    core.addColorStop(0, "rgba(255,225,200,0.5)"); core.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = core; ctx.fillRect(0, 0, W, H);
+    for (const p of SWG.pts) { ctx.globalAlpha = p.b; ctx.fillStyle = "#e8ecff"; ctx.fillRect(X(p.x), Y(p.y), p.s, p.s); }
+    ctx.globalAlpha = 1;
+    text("銀河中心", X(0), Y(0) + 4, { s: 10, a: "center", c: "rgba(255,230,200,0.6)", shadow: false });
+  }
   function ship(x, y, ang, col, s) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
     ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(s, 0); ctx.lineTo(-s, -s * 0.5); ctx.lineTo(-s * 0.6, 0); ctx.lineTo(-s, s * 0.5); ctx.closePath(); ctx.fill();
@@ -677,6 +704,7 @@
         ctx.strokeStyle = `rgba(255,220,150,${1 - f})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 10 + f * 70, 0, TAU); ctx.stroke();
       }
       if (e.fx === "flash") glow(x, y, 26 + 8 * Math.sin(t * 6), "rgba(255,180,120,0.8)", 0.6);
+      if (e.fx === "song" || e.song) songFx(x, y, 1, spaceA);
       ctx.globalAlpha = 1;
     }
 
@@ -747,6 +775,7 @@
           ctx.beginPath(); ctx.arc(X, Y, 6 + pulse * 26, 0, TAU); ctx.stroke();
           if (e.fx === "battle") for (let i = 0; i < 6; i++) if (Math.sin(t * 8 + i * 1.7) > 0.5) glow(X + Math.cos(i * 2.1) * 14, Y + Math.sin(i * 2.1) * 10, 8, "rgba(255,200,120,0.9)");
           if (e.fx === "nuke" && te > 1.5) { const f = clamp((te - 1.5) / 2.5, 0, 1); glow(X, Y, 10 + f * 70, "rgba(255,255,230,1)", 1 - f); }
+          if (e.fx === "song" || e.song) songFx(X, Y, 1, 1);
           if (e.fx === "cross" && te > 1) {
             // 十字の光柱
             const f = clamp((te - 1) / 3, 0, 1), a = 1 - Math.max(0, (te - 4) / 2);
