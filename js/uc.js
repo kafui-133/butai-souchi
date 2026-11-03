@@ -17,7 +17,10 @@
     [[114,-22],[114,-34],[123,-34],[131,-31],[138,-35],[141,-38],[147,-38],[150,-36],[153,-28],[153,-25],[146,-19],[142,-11],[140,-17],[136,-12],[130,-12],[126,-14],[122,-18]],
     [[-5,50],[1,51],[2,53],[-3,56],[-5,58],[-6,56],[-3,54],[-5,52]],
     [[-10,52],[-6,52],[-6,55],[-10,54]],
-    [[130,31],[132,34],[135,34],[140,35],[141,38],[142,43],[145,44],[140,41],[139,38],[136,36],[132,35]],
+    [[130.9,34.3],[132.5,35.5],[135.5,35.7],[136.8,37.2],[139,38],[139.9,40.5],[141.4,41.5],[142,39.5],[140.9,37],[140.8,35.7],[139.8,35],[138.8,34.6],[137,34.6],[135.5,33.5],[135,34.6],[133,34.4],[131.2,33.9]],
+    [[129.7,33.6],[131,33.9],[132,33.1],[131.4,31.4],[130.6,31.1],[129.9,32.5]],
+    [[132.5,33.9],[134.6,34.2],[134.7,33.4],[133.1,32.8]],
+    [[140,41.5],[141.5,42.5],[143.3,42],[145.8,43.3],[145.2,44.2],[141.8,45.4],[141.6,43.3],[140.3,42.5]],
     [[44,-25],[47,-25],[50,-15],[49,-12],[44,-17]],
     [[109,1],[118,7],[119,1],[116,-4],[110,-3]],
     [[95,5],[106,-6],[102,-4]],
@@ -137,7 +140,7 @@
 
   // 世界の切り替えタブ
   const tabs = $("#worldTabs");
-  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説", sw: "スター・ウォーズ", eva: "エヴァンゲリオン", macross: "マクロス" };
+  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説", sw: "スター・ウォーズ", eva: "エヴァンゲリオン", macross: "マクロス", more: "その他の作品" };
   for (const [sid, sname] of Object.entries(SERIES)) {
     const grp = document.createElement("div");
     grp.className = "tab-group";
@@ -443,7 +446,7 @@
     const S = Math.min(W / 2.3, H / 1.55) * gscale;
     const X = (x) => W / 2 + (x - gcx) * S, Y = (y) => H / 2 + (y - gcy) * S;
 
-    if (world.galaxy === "sw") drawSwBg(X, Y, S); else if (world.galaxy === "plain") drawPlainBg(X, Y, S); else drawLoghBg(X, Y, S);
+    if (world.galaxy === "sw") drawSwBg(X, Y, S); else if (world.galaxy === "plain") drawPlainBg(X, Y, S); else if (world.galaxy === "byston") drawBystonBg(X, Y, S); else drawLoghBg(X, Y, S);
 
     // 場所
     for (const [key, p] of Object.entries(PLACES)) {
@@ -655,7 +658,43 @@
     ctx.fillStyle = core; ctx.fillRect(0, 0, W, H);
     for (const p of SWG.pts) { ctx.globalAlpha = p.b; ctx.fillStyle = "#e8ecff"; ctx.fillRect(X(p.x), Y(p.y), p.s, p.s); }
     ctx.globalAlpha = 1;
-    text("銀河中心", X(0), Y(0) + 4, { s: 10, a: "center", c: "rgba(255,230,200,0.6)", shadow: false });
+    text(world.centerLabel || "銀河中心", X(0), Y(0) + 4, { s: 10, a: "center", c: "rgba(255,230,200,0.6)", shadow: false });
+    // 勢力の色・別の銀河・地域名（作品ごとの追加）
+    for (const tn of world.tints || []) {
+      const g = ctx.createRadialGradient(X(tn.p[0]), Y(tn.p[1]), 0, X(tn.p[0]), Y(tn.p[1]), tn.r * S);
+      g.addColorStop(0, tn.color); g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
+    for (const bl of world.blobs || []) {
+      for (let i = 0; i < 260; i++) {
+        const a = (i * 2.399) % TAU, r = Math.sqrt((i * 0.618) % 1) * bl.r;
+        ctx.globalAlpha = 0.35 + ((i * 7) % 10) / 20; ctx.fillStyle = "#e8ecff";
+        ctx.fillRect(X(bl.p[0] + Math.cos(a) * r), Y(bl.p[1] + Math.sin(a) * r * 0.7), 1.3, 1.3);
+      }
+      ctx.globalAlpha = 1;
+      glow(X(bl.p[0]), Y(bl.p[1]), bl.r * S * 1.2, "rgba(200,210,255,0.25)");
+      text(bl.name, X(bl.p[0]), Y(bl.p[1] - bl.r * 0.8) - 6, { s: 12, w: 800, a: "center", c: "rgba(210,220,255,0.85)" });
+    }
+    for (const lb of world.labels || []) text(lb.text, X(lb.p[0]), Y(lb.p[1]), { s: 14 * Math.min(1.4, gscale), w: 800, a: "center", c: lb.color });
+  }
+  /* 異世界バイストン・ウェル（ダンバイン）の模式図 */
+  function drawBystonBg(X, Y, S) {
+    const W = view.w, H = view.h;
+    const g = ctx.createLinearGradient(0, Y(-1), 0, Y(1));
+    g.addColorStop(0, "#0c2a3a"); g.addColorStop(0.45, "#16384a"); g.addColorStop(0.55, "#2c3a24"); g.addColorStop(1, "#1a2414");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // 大陸
+    ctx.fillStyle = "rgba(90,130,70,0.55)";
+    ctx.beginPath();
+    const land = [[-0.95, -0.1], [-0.6, -0.42], [-0.15, -0.38], [0.2, -0.5], [0.65, -0.35], [0.95, -0.05], [0.8, 0.45], [0.3, 0.55], [-0.2, 0.5], [-0.75, 0.42]];
+    land.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))));
+    ctx.closePath(); ctx.fill();
+    // オーラのきらめき
+    for (const p of SWG.pts.slice(0, 500)) { ctx.globalAlpha = p.b * 0.4; ctx.fillStyle = "#c8ffe0"; ctx.fillRect(X(p.x), Y(p.y), 1.2, 1.2); }
+    ctx.globalAlpha = 1;
+    text("ボッブ・レッス（海）", X(0), Y(-0.8), { s: 12, a: "center", c: "rgba(160,220,255,0.7)" });
+    text("バイストン・ウェル：海と陸のあいだにある世界", X(0), Y(0.82), { s: 12, a: "center", c: "rgba(200,240,200,0.75)" });
+    for (const lb of world.labels || []) text(lb.text, X(lb.p[0]), Y(lb.p[1]), { s: 14 * Math.min(1.4, gscale), w: 800, a: "center", c: lb.color });
   }
   function ship(x, y, ang, col, s) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
