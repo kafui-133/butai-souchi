@@ -140,7 +140,7 @@
 
   // 世界の切り替えタブ
   const tabs = $("#worldTabs");
-  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説", sw: "スター・ウォーズ", eva: "エヴァンゲリオン", macross: "マクロス", g999: "銀河鉄道999", more: "その他の作品" };
+  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説", sw: "スター・ウォーズ", eva: "エヴァンゲリオン", macross: "マクロス", g999: "松本零士作品", st: "スタートレック", more: "その他の作品" };
   for (const [sid, sname] of Object.entries(SERIES)) {
     const grp = document.createElement("div");
     grp.className = "tab-group";
@@ -691,6 +691,10 @@
       ctx.globalAlpha = 1;
       glow(X(bl.p[0]), Y(bl.p[1]), bl.r * S * 1.2, "rgba(200,210,255,0.25)");
       text(bl.name, X(bl.p[0]), Y(bl.p[1] - bl.r * 0.8) - 6, { s: 12, w: 800, a: "center", c: "rgba(210,220,255,0.85)" });
+    }
+    for (const ln of world.lines || []) {
+      ctx.setLineDash([6, 6]); ctx.strokeStyle = "rgba(170,190,255,0.35)"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(X(ln[0]), Y(ln[1])); ctx.lineTo(X(ln[2]), Y(ln[3])); ctx.stroke(); ctx.setLineDash([]);
     }
     for (const lb of world.labels || []) text(lb.text, X(lb.p[0]), Y(lb.p[1]), { s: 14 * Math.min(1.4, gscale), w: 800, a: "center", c: lb.color });
   }

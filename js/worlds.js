@@ -709,7 +709,7 @@
   };
   const G999_MAP = { map: "galaxy", galaxy: "plain", centerLabel: "", train: true, blobs: [{ p: [-0.86, -0.6], r: 0.14, name: "アンドロメダ" }], fleet: ["#c8ced8", "#ffb070"] };
   worlds.push(Object.assign({
-    id: "g999tv", series: "g999", era: "銀河鉄道999（TV版・1978〜1981年）", short: "TV版",
+    id: "g999tv", series: "g999", era: "銀河鉄道999（TV版・1978〜1981年）", short: "銀河鉄道999 TV版",
     intro: "松本零士の漫画を原作とするTVアニメ（全113話）。西暦2221年、裕福な人は機械の体で永遠の命を手に入れ、貧しい人は生身のまま虐げられる時代。少年・星野鉄郎は、機械の体をタダでくれる星を目指し、謎の美女メーテルとともに銀河超特急999号に乗る。各駅で停車する星々の物語を通して、限りある命の意味を描く。",
     works: {
       legend: { name: "メーテルレジェンド（2000, OVA）", color: "#c8a0e0" },
@@ -731,7 +731,7 @@
   }, G999_MAP));
 
   worlds.push(Object.assign({
-    id: "g999movie", series: "g999", era: "銀河鉄道999（劇場版・1979年／1981年）", short: "劇場版",
+    id: "g999movie", series: "g999", era: "銀河鉄道999（劇場版・1979年／1981年）", short: "銀河鉄道999 劇場版",
     intro: "りんたろう監督の劇場版『銀河鉄道999』（1979）と続編『さよなら銀河鉄道999 -アンドロメダ終着駅-』（1981）。TV版の長い旅を約2時間に再構成し、キャプテンハーロックやクイーン・エメラルダスなど松本零士作品の人物が大きな役割を果たす。",
     works: { m1: { name: "銀河鉄道999（1979）", color: "#ff9a3c" }, m2: { name: "さよなら銀河鉄道999（1981）", color: "#7fd0ff" }, m3: { name: "エターナル・ファンタジー（1998）", color: "#ff8fd0" } },
     places: G999_PLACES,
@@ -748,6 +748,94 @@
       { date: "さよならの後", work: "m3", kind: "space", place: "stations", route: ["earth", "stations"], title: "エターナル・ファンタジー", text: "『さよなら銀河鉄道999』の後を描く劇場版。成長した鉄郎は再びメーテルとともに999号に乗り、新たな旅へ出発する。" },
     ],
   }, G999_MAP));
+
+
+  /* ------------------------------------------------------------------ */
+  /* 宇宙海賊キャプテンハーロック */
+  worlds.push({
+    id: "harlock", series: "g999", era: "宇宙海賊キャプテンハーロック", short: "キャプテンハーロック",
+    intro: "松本零士原作のTVアニメ『宇宙海賊キャプテンハーロック』（1978, 全42話）。2977年、豊かさの中で無気力になった地球に、植物から生まれた異星の女性たち“マゾーン”が侵攻してくる。地球政府から追われる宇宙海賊ハーロックは、親友トチローの魂が宿るアルカディア号で、ただ一人地球を守るために戦う。劇場版『わが青春のアルカディア』などは別の時間軸の物語として後半に並べている。",
+    map: "earthmoon", noLagrange: true,
+    fleet: ["#9fb0c8", "#7fd07f"],
+    works: {
+      tv: { name: "宇宙海賊キャプテンハーロック（TV, 1978）", color: "#7fd0a0" },
+      arcadia: { name: "わが青春のアルカディア（1982, 劇場版）", color: "#ffb070" },
+      ssx: { name: "無限軌道SSX（1982, TV）", color: "#c8a0e0" },
+    },
+    places: {
+      mazone: far(-1.6, -0.9, "マゾーンの艦隊（遠方・縮尺外）", "#7fd07f", 12),
+      illumidas: far(1.6, -0.9, "イルミダス（遠方・縮尺外）", "#c8c0b8", 12),
+      arcadia: { p: [0.35, 0.3], name: "アルカディア号", type: "fortress" },
+    },
+    events: [
+      { date: "2977年", work: "tv", kind: "earth", earth: [35.7, 139.7], placeName: "地球（日本）", title: "無気力な地球と宇宙海賊", text: "機械に働かせ、遊び暮らすようになった2977年の地球。政府は危機に目を向けず、自分の信念に従って生きるハーロックは“宇宙海賊”として追われていた。" },
+      { date: "2977年", work: "tv", kind: "space", place: "mazone", fx: "battle", title: "マゾーンの侵攻", text: "植物から進化した女性だけの種族マゾーンが、地球への移住をもくろんで侵攻を始める。マゾーンはすでに古くから地球に潜み、人間社会に入り込んでいた。" },
+      { date: "2977年", work: "tv", kind: "space", place: "arcadia", fx: "flash", title: "台羽正とアルカディア号", text: "マゾーンの秘密に近づいた父を殺された少年・台羽正は、ハーロックのアルカディア号に乗り込む。船のコンピューターには、亡き親友・大山トチローの魂が宿っていた。" },
+      { date: "2977年", work: "tv", kind: "earth", earth: [35.7, 139.7], placeName: "地球", title: "トチローの娘まゆ", text: "地球にはトチローの娘・まゆが暮らしている。ハーロックは親友との約束を守り、離れたところからまゆを見守り続ける。" },
+      { date: "2977年", work: "tv", kind: "space", place: "earthorbit", fx: "battle", title: "マゾーン艦隊との戦い", text: "地球政府の協力を得られないまま、アルカディア号はわずか数十人の乗組員で、マゾーンの大艦隊と戦い続ける。" },
+      { date: "2977年", work: "tv", kind: "space", place: "mazone", fx: "battle", title: "女王ラフレシアとの決戦", text: "マゾーンの女王ラフレシアとハーロックが一騎打ちで対決し、マゾーンの侵攻は終わる。ハーロックは地球に戻らず、再び果てしない宇宙へと旅立つ。" },
+      { date: "別の時間軸", work: "arcadia", kind: "space", place: "illumidas", fx: "battle", title: "わが青春のアルカディア", text: "地球はイルミダスに占領されていた。戦いに敗れた宇宙船乗りハーロックは、技術者トチローと出会い、二人の夢の船アルカディア号を完成させる。クイーン・エメラルダスとともに、圧政に抵抗するため地球を離れて宇宙へ旅立つ。" },
+      { date: "別の時間軸", work: "ssx", kind: "space", place: "arcadia", fx: "battle", title: "無限軌道SSX", text: "『わが青春のアルカディア』の続きを描くTVシリーズ。地球を支配するイルミダスとの戦いを続けるハーロックたちの旅を描く。" },
+    ],
+  });
+
+
+  /* ------------------------------------------------------------------ */
+  /* スタートレック */
+  worlds.push({
+    id: "startrek", series: "st", era: "スタートレック（2063〜3190年代）", short: "スタートレック",
+    intro: "ジーン・ロッデンベリーが生んだ『スタートレック』（1966〜）。ワープ航法を手にした人類が異星人と出会い、惑星連邦を作って銀河を探査する。銀河は中心を通る2本の線でα・β・γ・δの4つの宇宙域（クアドラント）に分けられ、地球はαとβの境目にある。年はシリーズで使われる西暦。",
+    map: "galaxy", galaxy: "plain", centerLabel: "銀河中心",
+    lines: [[0, -0.85, 0, 0.85], [-1.05, 0, 1.05, 0]],
+    labels: [
+      { p: [-0.6, 0.62], text: "α宇宙域", color: "rgba(150,190,255,0.85)" },
+      { p: [0.6, 0.62], text: "β宇宙域", color: "rgba(255,170,150,0.85)" },
+      { p: [-0.6, -0.68], text: "γ宇宙域", color: "rgba(200,170,255,0.85)" },
+      { p: [0.6, -0.68], text: "δ宇宙域", color: "rgba(150,255,190,0.85)" },
+    ],
+    fleet: ["#c8d8ff", "#ff9a6b"],
+    works: {
+      fc: { name: "ファースト・コンタクト（1996, 映画）", color: "#9aa8cc" },
+      ent: { name: "スタートレック：エンタープライズ", color: "#c8b090" },
+      snw: { name: "ストレンジ・ニュー・ワールド", color: "#7fd0ff" },
+      tos: { name: "宇宙大作戦（TOS）", color: "#ffd34f" },
+      movie: { name: "映画（TOSキャスト）", color: "#ffb070" },
+      tng: { name: "新スタートレック（TNG）", color: "#ff6b6b" },
+      ds9: { name: "ディープ・スペース・ナイン（DS9）", color: "#b0b8c8" },
+      voy: { name: "ヴォイジャー（VOY）", color: "#6dd3ff" },
+      pic: { name: "ピカード ほか", color: "#c8a0e0" },
+      dis: { name: "ディスカバリー（32世紀）", color: "#7dff9c" },
+    },
+    places: {
+      earth: planet([0, 0.55], "地球（太陽系）", "#4f9bff"),
+      vulcan: planet([-0.09, 0.46], "ヴァルカン", "#e8a080"),
+      wolf359: planet([0.1, 0.62], "ウルフ359", "#ff8a8a"),
+      qonos: planet([0.16, 0.44], "クリンゴン（クロノス）", "#c84a4a"),
+      romulus: planet([0.1, 0.36], "ロミュラス", "#7fc87f"),
+      bajor: planet([-0.22, 0.58], "ベイジョー（DS9）", "#e8c27a"),
+      cardassia: planet([-0.34, 0.68], "カーデシア", "#a89a86"),
+      wormhole: { p: [-0.24, 0.54], name: "", type: "point" },
+      gamma: planet([-0.55, -0.4], "γ宇宙域・ドミニオン", "#c8a0e0"),
+      borg: planet([0.6, -0.42], "ボーグ（δ宇宙域）", "#7fd07f"),
+      caretaker: planet([0.48, -0.5], "ヴォイジャーが飛ばされた宙域", "#6dd3ff"),
+    },
+    events: [
+      { date: "2063年", work: "fc", kind: "space", place: "earth", placeName: "地球・モンタナ州ボーズマン", fx: "flash", title: "ファースト・コンタクト", text: "第三次世界大戦後の荒廃した地球で、ゼフラム・コクレーンが人類初のワープ飛行に成功する。そのワープの痕跡に気づいたヴァルカン人の船が着陸し、人類は初めて異星人と出会う。" },
+      { date: "2151年", work: "ent", kind: "space", place: "vulcan", route: ["earth", "vulcan"], routeColor: "#c8b090", title: "エンタープライズNX-01の出航", text: "地球初のワープ5級の宇宙船エンタープライズ号（NX-01）が、アーチャー船長のもと深宇宙の探査に出発する。" },
+      { date: "2161年", work: "ent", kind: "space", place: "earth", placeName: "地球・サンフランシスコ", fx: "flash", title: "惑星連邦の設立", text: "地球、ヴァルカン、アンドリア、テラライトなどが惑星連邦を設立する。本部はサンフランシスコに置かれ、宇宙艦隊（スターフリート）が探査と防衛を担う。" },
+      { date: "2250年代", work: "snw", kind: "space", place: "earth", title: "パイク船長のエンタープライズ", text: "クリストファー・パイク船長のU.S.S.エンタープライズ（NCC-1701）が、スポックらとともに未知の惑星を探査する。" },
+      { date: "2265〜2270年", work: "tos", kind: "space", place: "qonos", fx: "battle", route: ["earth", "qonos"], routeColor: "#ffd34f", title: "カーク船長の5年間の調査飛行", text: "ジェームズ・T・カーク船長、ミスター・スポック、ドクター・マッコイらが、エンタープライズ号で「人類未踏の宇宙」へ5年間の調査飛行に出る。敵対するクリンゴン帝国やロミュラン帝国との緊張も描かれる。" },
+      { date: "2293年", work: "movie", kind: "space", place: "qonos", fx: "nuke", title: "プラクシスの爆発とキトマー和平", text: "クリンゴンの衛星プラクシスが爆発し、クリンゴン帝国は存亡の危機に陥る。これをきっかけに惑星連邦とクリンゴンは和平へ向かう（映画『未知の世界』）。" },
+      { date: "2364年", work: "tng", kind: "space", place: "romulus", route: ["earth", "romulus"], routeColor: "#ff6b6b", title: "ピカード艦長のエンタープライズD", text: "ジャン＝リュック・ピカード艦長のエンタープライズD（NCC-1701-D）が就航。アンドロイドのデータ、クリンゴン人のウォーフらとともに探査を続ける。" },
+      { date: "2367年", work: "tng", kind: "space", place: "wolf359", fx: "battle", route: ["borg", "wolf359"], routeColor: "#7fd07f", title: "ウルフ359の戦い（ボーグの侵攻）", text: "人や種族を機械と融合させて“同化”する集合体ボーグの立方体艦が地球に迫る。ボーグに同化されたピカードの知識を使われ、ウルフ359で連邦艦隊が壊滅する。" },
+      { date: "2369年", work: "ds9", kind: "space", place: "bajor", fx: "flash", title: "ベイジョーのワームホール", text: "カーデシアの占領から解放された惑星ベイジョーの近くで、遠く離れたγ宇宙域と結ぶ安定したワームホールが発見される。宇宙ステーション、ディープ・スペース・ナインは交通の要所になる。" },
+      { date: "2371年", work: "voy", kind: "space", place: "caretaker", route: ["bajor", "caretaker"], routeColor: "#6dd3ff", title: "ヴォイジャー、δ宇宙域へ", text: "キャスリン・ジェインウェイ艦長のU.S.S.ヴォイジャーが、謎の存在によって7万光年かなたのδ宇宙域に飛ばされる。通常のワープでは帰還に75年かかる旅が始まる。" },
+      { date: "2373〜2375年", work: "ds9", kind: "space", place: "cardassia", fx: "battle", route: ["gamma", "wormhole", "cardassia"], routeColor: "#c8a0e0", title: "ドミニオン戦争", text: "ワームホールの向こうのγ宇宙域を支配するドミニオンが、カーデシアと手を組んでα宇宙域に侵攻する。惑星連邦・クリンゴン・ロミュランが連合して戦う。" },
+      { date: "2378年", work: "voy", kind: "space", place: "earth", route: ["caretaker", "borg", "earth"], routeColor: "#6dd3ff", title: "ヴォイジャーの帰還", text: "ボーグのトランスワープ通路を利用して、ヴォイジャーは7年で地球に帰還する。" },
+      { date: "2387年", work: "pic", kind: "space", place: "romulus", fx: "nuke", title: "ロミュラスの崩壊", text: "近くの恒星の超新星爆発によって、ロミュラン帝国の母星ロミュラスが失われる。この出来事は2009年の映画『スター・トレック』や、ドラマ『ピカード』の物語の背景になる。" },
+      { date: "3069年（3188年）", work: "dis", kind: "space", place: "earth", fx: "flash", title: "バーン（大燃焼）と32世紀", text: "銀河中のダイリチウム（ワープの燃料）が一斉に不安定化した「バーン」で、多くの船が失われ、惑星連邦は分裂する。3188年、未来へ跳んだU.S.S.ディスカバリーの乗員たちが連邦の再建に挑む。" },
+    ],
+  });
 
   window.TIMELINE_WORLDS = worlds;
 })();
