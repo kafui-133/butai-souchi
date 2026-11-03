@@ -493,7 +493,7 @@
       const i0 = Math.min(pts.length - 2, Math.floor(f)), u = f - i0;
       const fx = lerp(pts[i0][0], pts[i0 + 1][0], u), fy = lerp(pts[i0][1], pts[i0 + 1][1], u);
       const ang = Math.atan2(pts[i0 + 1][1] - pts[i0][1], pts[i0 + 1][0] - pts[i0][0]);
-      const empire = world.galaxy === "sw" ? false : (PLACES[e.route[0]].p[0] < 0) && e.route[0] !== "altair";
+      const empire = world.galaxy === "sw" ? false : (PLACES[e.route[0]].p[0] > 0) && e.route[0] !== "altair";
       const routeCol = e.routeColor || (empire ? "#ffd27a" : "#8fc0ff");
       if (world.train) {
         // 列車：機関車と客車が航路に沿って走る
@@ -530,7 +530,7 @@
           const fc = e.fleet || world.fleet || ["#ffd27a", "#8fc0ff"];
           ship(x, y, f.side ? Math.PI : 0, fc[f.side], 6);
           if (Math.sin(t * 6 + f.ph * 5) > 0.85) {
-            ctx.strokeStyle = world.galaxy === "sw" ? (f.side ? "rgba(120,255,140,0.9)" : "rgba(255,90,90,0.9)") : f.side ? "rgba(140,200,255,0.9)" : "rgba(255,220,140,0.9)"; ctx.lineWidth = 1.2;
+            ctx.strokeStyle = world.galaxy === "sw" ? (f.side ? "rgba(120,255,140,0.9)" : "rgba(255,90,90,0.9)") : fc[f.side]; ctx.lineWidth = 1.2;
             ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(cx - sx * 30 + Math.sin(f.ph) * 20, y + Math.cos(t + f.ph) * 30); ctx.stroke();
           }
           if (Math.sin(t * 3 + f.ph * 7) > 0.97) glow(x, y, 14, "rgba(255,200,120,1)");
@@ -589,10 +589,10 @@
     ctx.fillStyle = "#04030a"; ctx.fillRect(0, 0, W, H);
     // 勢力の色
     const tint = (x, y, col) => { const g = ctx.createRadialGradient(X(x), Y(y), 0, X(x), Y(y), S * 0.9); g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
-    tint(-0.6, 0, "rgba(255,190,80,0.16)");
-    tint(0.6, 0, "rgba(80,150,255,0.16)");
+    tint(0.6, 0, "rgba(255,190,80,0.16)");
+    tint(-0.6, 0, "rgba(80,150,255,0.16)");
     // 星
-    for (const p of GAL.pts) { ctx.globalAlpha = p.b; ctx.fillStyle = p.x < -0.1 ? "#ffe8c0" : p.x > 0.1 ? "#cfe0ff" : "#fff"; ctx.fillRect(X(p.x), Y(p.y), p.s, p.s); }
+    for (const p of GAL.pts) { ctx.globalAlpha = p.b; ctx.fillStyle = p.x > 0.1 ? "#ffe8c0" : p.x < -0.1 ? "#cfe0ff" : "#fff"; ctx.fillRect(X(p.x), Y(p.y), p.s, p.s); }
     ctx.globalAlpha = 1;
     // 航行不能宙域
     for (const n of GAL.neb) glow(X(n.x), Y(n.y), n.r * S, `hsla(${330 + n.h * 40},70%,45%,0.5)`, 0.5);
@@ -600,8 +600,8 @@
     ctx.setLineDash([4, 5]); ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
     for (const [y0, y1] of [[-0.4, -0.2], [0.33, 0.51]]) { ctx.beginPath(); ctx.moveTo(X(-0.1), Y(y0)); ctx.lineTo(X(0.1), Y(y0)); ctx.moveTo(X(-0.1), Y(y1)); ctx.lineTo(X(0.1), Y(y1)); ctx.stroke(); }
     ctx.setLineDash([]);
-    text("銀河帝国", X(-0.62), Y(-0.6), { s: 15 * Math.min(1.4, gscale), w: 800, a: "center", c: "rgba(255,210,120,0.9)" });
-    text("自由惑星同盟", X(0.62), Y(-0.6), { s: 15 * Math.min(1.4, gscale), w: 800, a: "center", c: "rgba(140,190,255,0.9)" });
+    text("銀河帝国", X(0.62), Y(-0.6), { s: 15 * Math.min(1.4, gscale), w: 800, a: "center", c: "rgba(255,210,120,0.9)" });
+    text("自由惑星同盟", X(-0.62), Y(-0.6), { s: 15 * Math.min(1.4, gscale), w: 800, a: "center", c: "rgba(140,190,255,0.9)" });
     text("航行不能宙域", X(0), Y(0.08), { s: 10, a: "center", c: "rgba(255,150,190,0.7)" });
     text("イゼルローン回廊", X(0), Y(-0.43), { s: 10, a: "center", c: "rgba(255,255,255,0.6)" });
     text("フェザーン回廊", X(0), Y(0.56), { s: 10, a: "center", c: "rgba(255,255,255,0.6)" });
