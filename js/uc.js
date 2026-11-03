@@ -140,7 +140,7 @@
 
   // 世界の切り替えタブ
   const tabs = $("#worldTabs");
-  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説", sw: "スター・ウォーズ", eva: "エヴァンゲリオン", macross: "マクロス", more: "その他の作品" };
+  const SERIES = { gundam: "ガンダムシリーズ", logh: "銀河英雄伝説", sw: "スター・ウォーズ", eva: "エヴァンゲリオン", macross: "マクロス", g999: "銀河鉄道999", more: "その他の作品" };
   for (const [sid, sname] of Object.entries(SERIES)) {
     const grp = document.createElement("div");
     grp.className = "tab-group";
@@ -495,7 +495,24 @@
       const ang = Math.atan2(pts[i0 + 1][1] - pts[i0][1], pts[i0 + 1][0] - pts[i0][0]);
       const empire = world.galaxy === "sw" ? false : (PLACES[e.route[0]].p[0] < 0) && e.route[0] !== "altair";
       const routeCol = e.routeColor || (empire ? "#ffd27a" : "#8fc0ff");
-      for (let q = 0; q < 7; q++) {
+      if (world.train) {
+        // 列車：機関車と客車が航路に沿って走る
+        const at = (g) => { g = clamp(g, 0, pts.length - 1); const j = Math.min(pts.length - 2, Math.floor(g)), w = g - j; return [X(lerp(pts[j][0], pts[j + 1][0], w)), Y(lerp(pts[j][1], pts[j + 1][1], w))]; };
+        ctx.strokeStyle = "rgba(255,240,200,0.35)"; ctx.lineWidth = 3; ctx.beginPath();
+        for (let k = 0; k <= 30; k++) { const [x, y] = at(f - k * 0.012); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+        for (let k = 6; k >= 0; k--) {
+          const [x, y] = at(f - k * 0.045), [x2, y2] = at(f - k * 0.045 - 0.01);
+          const a = Math.atan2(y - y2, x - x2);
+          ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+          ctx.fillStyle = k === 0 ? "#2a2a30" : "#3a5a8a"; ctx.fillRect(-8, -4, 15, 8);
+          if (k === 0) { ctx.fillStyle = "#ffd34f"; ctx.fillRect(5, -2, 3, 4); }
+          else { ctx.fillStyle = "#ffe9a8"; for (let w = -5; w < 6; w += 4) ctx.fillRect(w, -2, 2, 2); }
+          ctx.restore();
+        }
+        const [hx, hy] = at(f);
+        glow(hx + 6, hy, 10, "rgba(255,230,150,0.8)");
+        for (let k = 0; k < 6; k++) { const [sx, sy] = at(f - 0.01 * k); glow(sx, sy - 6 - k * 3, 4 + k, "rgba(220,220,230,0.4)", 0.6 - k * 0.08); }
+      } else for (let q = 0; q < 7; q++) {
         const ox = -Math.cos(ang) * (q % 4) * 7 - Math.sin(ang) * ((q % 3) - 1) * 7, oy = -Math.sin(ang) * (q % 4) * 7 + Math.cos(ang) * ((q % 3) - 1) * 7;
         ship(X(fx) + ox, Y(fy) + oy, ang, routeCol, 5);
       }

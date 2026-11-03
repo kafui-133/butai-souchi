@@ -693,5 +693,53 @@
     ],
   });
 
+
+  /* ------------------------------------------------------------------ */
+  /* 銀河鉄道999 */
+  const G999_PLACES = {
+    earth: planet([0.6, 0.3], "地球・メガロポリス", "#4f9bff"),
+    mars: planet([0.55, 0.22], "火星", "#e0673c"),
+    titan: planet([0.49, 0.14], "タイタン", "#e8c26a"),
+    pluto: planet([0.42, 0.05], "冥王星", "#c8c0b8"),
+    heavymelder: planet([0.12, -0.12], "惑星ヘビーメルダー", "#a08ac8"),
+    lametal: planet([-0.6, -0.42], "惑星ラーメタル", "#c8a0e0"),
+    andromeda: { p: [-0.86, -0.6], name: "大アンドロメダ（機械化母星）", type: "fortress" },
+    stations: { p: [-0.2, -0.25], name: "", type: "point" },
+  };
+  const G999_MAP = { map: "galaxy", galaxy: "plain", centerLabel: "", train: true, blobs: [{ p: [-0.86, -0.6], r: 0.14, name: "アンドロメダ" }], fleet: ["#c8ced8", "#ffb070"] };
+  worlds.push(Object.assign({
+    id: "g999tv", series: "g999", era: "銀河鉄道999（TV版・1978〜1981年）", short: "TV版",
+    intro: "松本零士の漫画を原作とするTVアニメ（全113話）。西暦2221年、裕福な人は機械の体で永遠の命を手に入れ、貧しい人は生身のまま虐げられる時代。少年・星野鉄郎は、機械の体をタダでくれる星を目指し、謎の美女メーテルとともに銀河超特急999号に乗る。各駅で停車する星々の物語を通して、限りある命の意味を描く。",
+    works: { tv: { name: "銀河鉄道999（TV）", color: "#ffd34f" } },
+    places: G999_PLACES,
+    events: [
+      { date: "2221年", work: "tv", kind: "space", place: "earth", fx: "flash", title: "メガロポリスと機械伯爵", text: "機械化人の機械伯爵に母を殺された鉄郎は、母にそっくりな謎の美女メーテルから、999号の無期限パスをもらう。機械の体を手に入れて伯爵に復讐するため、終着駅のアンドロメダを目指す。" },
+      { date: "旅の序盤", work: "tv", kind: "space", place: "titan", route: ["earth", "mars", "titan"], title: "タイタンの眠れる戦士", text: "土星の衛星タイタンで、鉄郎は老婆から息子の形見の銃「戦士の銃（コスモドラグーン）」を譲られる。" },
+      { date: "旅の序盤", work: "tv", kind: "space", place: "pluto", route: ["titan", "pluto"], title: "冥王星の氷の墓場", text: "冥王星の氷の下には、機械の体になった人々が捨てた生身の体が眠っている。墓守のシャドウは、自分の美しい生身の体を見つめ続けていた。" },
+      { date: "旅の途中", work: "tv", kind: "space", place: "heavymelder", placeName: "時間城（機械伯爵の居城）", fx: "battle", route: ["pluto", "heavymelder"], title: "時間城と機械伯爵", text: "鉄郎は母の仇・機械伯爵の居城「時間城」にたどり着き、ついに伯爵を討つ。" },
+      { date: "旅の途中（全113話）", work: "tv", kind: "space", place: "stations", route: ["heavymelder", "stations"], title: "停車駅の星々", text: "999号は一つの星に1日（その星の1日）だけ停車する。機械化された人々の星、時間の止まった星、人の心を失った星――鉄郎は各駅で出会った人々を通して、生身の命と機械の体の違いを考え続ける。" },
+      { date: "終着駅", work: "tv", kind: "space", place: "andromeda", fx: "nuke", route: ["stations", "lametal", "andromeda"], title: "終着駅・大アンドロメダ", text: "機械の体をくれる星の正体は、人間を機械の部品に変える機械化母星だった。その支配者プロメシュームはメーテルの母であり、メーテルは若者を連れてくる役目を負わされていた。鉄郎とメーテルは機械化母星を破壊する。" },
+      { date: "旅の終わり", work: "tv", kind: "space", place: "earth", fx: "flash", route: ["andromeda", "earth"], title: "メーテルとの別れ", text: "生身の人間として生きることを選んで地球に戻った鉄郎。メーテルは次の少年のもとへ旅立ち、二人は別れる。" },
+    ],
+  }, G999_MAP));
+
+  worlds.push(Object.assign({
+    id: "g999movie", series: "g999", era: "銀河鉄道999（劇場版・1979年／1981年）", short: "劇場版",
+    intro: "りんたろう監督の劇場版『銀河鉄道999』（1979）と続編『さよなら銀河鉄道999 -アンドロメダ終着駅-』（1981）。TV版の長い旅を約2時間に再構成し、キャプテンハーロックやクイーン・エメラルダスなど松本零士作品の人物が大きな役割を果たす。",
+    works: { m1: { name: "銀河鉄道999（1979）", color: "#ff9a3c" }, m2: { name: "さよなら銀河鉄道999（1981）", color: "#7fd0ff" } },
+    places: G999_PLACES,
+    events: [
+      { date: "劇場版", work: "m1", kind: "space", place: "earth", fx: "flash", title: "旅立ち", text: "機械伯爵に母を殺された鉄郎は、メーテルから999号のパスを受け取り、機械の体をタダでくれる星を目指して旅立つ。" },
+      { date: "劇場版", work: "m1", kind: "space", place: "titan", route: ["earth", "titan"], title: "タイタン：戦士の銃", text: "タイタンで、鉄郎は老婆から息子トチローの銃を受け取る。" },
+      { date: "劇場版", work: "m1", kind: "space", place: "pluto", route: ["titan", "pluto"], title: "冥王星：シャドウ", text: "生身の体を捨てた人々の墓場・冥王星で、鉄郎は墓守のシャドウと出会う。" },
+      { date: "劇場版", work: "m1", kind: "space", place: "heavymelder", fx: "battle", route: ["pluto", "heavymelder"], title: "ヘビーメルダー：トチローとハーロック", text: "荒くれ者の星ヘビーメルダーで、鉄郎は山賊アンタレス、キャプテンハーロック、クイーン・エメラルダスと出会う。病に倒れたトチローは息を引き取り、その魂はハーロックの船アルカディア号に宿る。鉄郎は時間城で母の仇・機械伯爵を討つ。" },
+      { date: "劇場版", work: "m1", kind: "space", place: "andromeda", fx: "nuke", route: ["heavymelder", "andromeda"], title: "機械化母星プロメシューム", text: "終着駅の機械化母星で、鉄郎は機械の体が“部品”に過ぎないことを知る。メーテルは母プロメシュームに背き、ハーロックとエメラルダスの助けを得て母星は崩壊する。" },
+      { date: "劇場版", work: "m1", kind: "space", place: "earth", fx: "flash", route: ["andromeda", "earth"], title: "さよならメーテル", text: "地球に戻った鉄郎を残し、メーテルは999号で去っていく。少年の日の旅が終わる。" },
+      { date: "さよなら（2年後）", work: "m2", kind: "space", place: "earth", fx: "battle", title: "機械帝国の侵攻と再出発", text: "地球は機械帝国に攻撃され、鉄郎はパルチザンとして戦っていた。メーテルからの呼びかけを受け、鉄郎は再び999号に乗り込む。" },
+      { date: "さよなら", work: "m2", kind: "space", place: "lametal", route: ["earth", "lametal"], title: "惑星ラーメタル", text: "メーテルの故郷ラーメタルで、鉄郎は機械帝国の成り立ちとメーテルの過去に触れる。" },
+      { date: "さよなら", work: "m2", kind: "space", place: "andromeda", fx: "battle", route: ["lametal", "andromeda"], title: "大アンドロメダと黒騎士ファウスト", text: "機械帝国の本拠・大アンドロメダで、鉄郎は黒騎士ファウストと対決する。その正体は鉄郎の父だった。" },
+    ],
+  }, G999_MAP));
+
   window.TIMELINE_WORLDS = worlds;
 })();
